@@ -145,8 +145,8 @@ def train():
     check_dir_exists(['res/', 'model', 'res/AE-'+args.dataset])
 
     for epoch in range(args.epoch):
+        step_time = time.time()
         for step, (x, y) in enumerate(train_loader):
-            step_time = time.time()
             # b_x = Variable(x.view(-1, 3, HEIGHT, WEIGHT))  # batch x, shape (batch, 32*32*3)
             b_x = Variable(x).cuda() if cuda else Variable(x)
             b_y = b_x.detach().cuda() if cuda else b_x.detach()  # batch y, shape (batch, 32*32*3)
@@ -171,6 +171,7 @@ def train():
                 torch.save(autoencoder, model_name)
                 print('Epoch:', epoch, 'Step:', step, '|', 'train loss %.6f; Time cost %.2f s'
                       % (loss.data[0], time.time() - step_time))
+                step_time = time.time()
     print('Finished. Totally cost %.2f' % time.time() - start_time)
 
 
