@@ -108,8 +108,6 @@ class VGGEncoder(nn.Module):
 
     def forward(self, x):
         encode = self.encoder(x)
-        print('Encoder size:')
-        print(encode.shape)
         return encode
 
     @staticmethod
@@ -146,8 +144,6 @@ class VGGDecoder(nn.Module):
 
     def forward(self, x):
         decode = self.decoder(x)
-        print('Decoder size:')
-        print(decode.shape)
         return decode
 
     @staticmethod
