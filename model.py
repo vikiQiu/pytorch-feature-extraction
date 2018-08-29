@@ -92,7 +92,7 @@ class SimpleDecoder(nn.Module):
 
 
 class VGGEncoder(nn.Module):
-    def __init__(self, model='vgg16', batch_norm=True):
+    def __init__(self, model='vgg16', out_channels=None, batch_norm=True):
         super(VGGEncoder, self).__init__()
 
         cfg = {
@@ -104,14 +104,14 @@ class VGGEncoder(nn.Module):
         }
 
         model_list = {'vgg11': 'A', 'vgg13': 'B', 'vgg16': 'D', 'vgg19': 'E'}
+        self.out_channels = out_channels
         self.encoder = self._make_vgg_layers(cfg[model_list[model]], batch_norm)
 
     def forward(self, x):
         encode = self.encoder(x)
         return encode
 
-    @staticmethod
-    def _make_vgg_layers(cfg, batch_norm=False):
+    def _make_vgg_layers(self, cfg, batch_norm=False):
         layers = []
         in_channels = 3
         for v in cfg:
@@ -124,12 +124,13 @@ class VGGEncoder(nn.Module):
                 else:
                     layers += [conv2d, nn.ReLU(inplace=True)]
                 in_channels = v
-        layers += [nn.Conv2d(512, 32, kernel_size=1)]
+        if self.out_channels is not None:
+            layers += [nn.Conv2d(512, self.out_channels, kernel_size=1)]
         return nn.Sequential(*layers)
 
 
 class VGGDecoder(nn.Module):
-    def __init__(self, model='vgg16', batch_norm=True):
+    def __init__(self, model='vgg16', out_channels=None,  batch_norm=True):
         super(VGGDecoder, self).__init__()
 
         cfg = {
@@ -142,16 +143,16 @@ class VGGDecoder(nn.Module):
         }
 
         model_list = {'vgg11': 'A', 'vgg13': 'B', 'vgg16': 'D', 'vgg19': 'E', 'Simple': 'S'}
+        self.out_channels = out_channels
         self.decoder = self._make_vgg_layers(cfg[model_list[model]], batch_norm)
 
     def forward(self, x):
         decode = self.decoder(x)
         return decode
 
-    @staticmethod
-    def _make_vgg_layers(cfg, batch_norm=False):
+    def _make_vgg_layers(self, cfg, batch_norm=False):
         in_channels = int(512/8)
-        layers = [nn.Conv2d(32, in_channels, kernel_size=1)]
+        layers = [nn.Conv2d(512, in_channels, kernel_size=1)] if self.out_channels is None else [nn.Conv2d(32, in_channels, kernel_size=1)]
         for v in cfg[::-1]:
             if v == 'M':
                 layers += [nn.ConvTranspose2d(in_channels=in_channels, out_channels=in_channels,

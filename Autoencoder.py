@@ -25,6 +25,7 @@ parser.add_argument("--lr", type=int, default=1e-4, help="Learning rate.")
 parser.add_argument("--img-size", type=int, default=224, help="Height Weight of the training images after transform.")
 parser.add_argument('--load-model', action="store_true", default=False)
 parser.add_argument('--use-gpus', action='store_false', dest='cuda', default=True)
+parser.add_argument("--feature-channel", type=int, default=None, help="The output channels of encoder.", dest='fea_c')
 
 args = parser.parse_args()
 cuda = args.cuda and torch.cuda.is_available()
@@ -60,7 +61,7 @@ def init_model(model):
     if model == 'conv':
         encoder, decoder = SimpleEncoder(), SimpleDecoder()
     elif 'vgg' in model:
-        encoder, decoder = VGGEncoder(model), VGGDecoder('Simple')
+        encoder, decoder = VGGEncoder(model), VGGDecoder(model)
     else:
         print('Model not found! Use "conv" instead.')
         encoder, decoder = SimpleEncoder(), SimpleDecoder()
@@ -88,8 +89,8 @@ class AutoEncoder(torch.nn.Module):
 
 def train():
     start_time = time.time()
-    model_name = 'model/AE_%s_model-%s.pkl' % (args.model, args.dataset)
-    pic_dir = 'res/AE_%s-%s/' % (args.model, args.dataset)
+    model_name = 'model/AE_%s%s_model-%s.pkl' % (args.model, '' if args.fea_c is None else args.fea_c, args.dataset)
+    pic_dir = 'res/AE_%s%s-%s/' % (args.model, '' if args.fea_c is None else args.fea_c, args.dataset)
     if os.path.exists(model_name) and args.load_model:
         print('Loading model ...')
         autoencoder = torch.load(model_name).to(device)
