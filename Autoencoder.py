@@ -144,14 +144,14 @@ def train():
     for epoch in range(args.epoch):
         for step, (x, y) in enumerate(train_loader):
             # b_x = Variable(x.view(-1, 3, HEIGHT, WEIGHT))  # batch x, shape (batch, 32*32*3)
-            b_x = Variable(x)
-            b_y = b_x.detach()  # batch y, shape (batch, 32*32*3)
+            b_x = Variable(x).cuda() if cuda else Variable(x)
+            b_y = b_x.detach().cuda() if cuda else b_x.detach()  # batch y, shape (batch, 32*32*3)
 
             encoded, decoded = autoencoder(b_x)
 
             if step % 100 == 0:
                 img_to_save = decoded.data
-                save_image(img_to_save, 'res/ae/%s-%s.jpg' % (epoch, step))
+                save_image(img_to_save, 'res/AE-%s/%s-%s.jpg' % (args.dataset, epoch, step))
             # io.imsave('.xxx.jpg',img_to_save[0])
 
             # print('wwwwww')
@@ -164,7 +164,7 @@ def train():
             optimizer.step()
 
             if step % 10 == 0:
-                torch.save(autoencoder, 'model/ae_model.pkl')
+                torch.save(autoencoder, 'model/AE_model-%s.pkl' % args.dataset)
                 print('Epoch:', epoch, 'Step:', step, '|', 'train loss %.6f:' % loss.data[0])
 
 
