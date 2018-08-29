@@ -129,9 +129,10 @@ class AutoEncoder(torch.nn.Module):
 
 
 def train():
-    if os.path.exists('model/ae_model.pkl') and args.load_model:
+    model_name = 'model/AE_model-%s.pkl' % args.dataset
+    if os.path.exists(model_name) and args.load_model:
         print('Loading model ...')
-        autoencoder = torch.load('model/ae_model.pkl').to(device)
+        autoencoder = torch.load(model_name).to(device)
     else:
         autoencoder = AutoEncoder().to(device)
 
@@ -164,7 +165,7 @@ def train():
             optimizer.step()
 
             if step % 10 == 0:
-                torch.save(autoencoder, 'model/AE_model-%s.pkl' % args.dataset)
+                torch.save(autoencoder, model_name)
                 print('Epoch:', epoch, 'Step:', step, '|', 'train loss %.6f:' % loss.data[0])
 
 
