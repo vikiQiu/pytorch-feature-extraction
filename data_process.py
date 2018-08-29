@@ -45,12 +45,14 @@ def get_xml_label(dir_path, file_name):
     return pic_name, label
 
 
-def filter_label(not_exists, label_list, img_list):
-    for pic_name in not_exists:
+def filter_label(not_exists, label_list, img_list, img_dir, Debug=False):
+    for pic in not_exists:
+        pic_name = os.path.join(img_dir, pic)
         if pic_name in img_list:
             ind = img_list.index(pic_name)
             img_list.remove(pic_name)
             label_list.remove(label_list[ind])
+            if Debug: print('%s is removed.' % pic_name)
     return img_list, label_list
 
 
@@ -83,11 +85,12 @@ def get_imagenet1000_val_labels(dir_path, img_dir, file_name='labels.csv', Debug
     filter_list = ['ILSVRC2012_val_00021280.JPEG']
     if not os.path.exists(os.path.join(dir_path, file_name)):
         img_list, label_list = get_all_xml_labels(dir_path, img_dir, file_name)
-        img_list, label_list = filter_label(filter_list, label_list, img_list)
     else:
         df = pd.read_csv(os.path.join(dir_path, file_name))
         img_list = list(df.img_list)
         label_list = list(df.label_list)
+
+    img_list, label_list = filter_label(filter_list, label_list, img_list, img_dir, Debug)
     if Debug:
         print('Totally {} images.'.format(len(img_list)))
         print(img_list[:10])
@@ -137,7 +140,7 @@ if __name__ == '__main__':
     # get_all_xml_labels(dir_path, Debug=True)
 
     '''TEST get_imagenet1000_val_labels()'''
-    # get_imagenet1000_val_labels(label_dir, img_dir, 'labels.csv', Debug=True)
+    get_imagenet1000_val_labels(label_dir, img_dir, 'labels.csv', Debug=True)
 
     # TEST ImageNetDataset
-    testImageNetDataset(img_dir, label_dir, fix_size_transform(256))
+    # testImageNetDataset(img_dir, label_dir, fix_size_transform(256))
