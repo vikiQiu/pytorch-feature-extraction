@@ -1,6 +1,7 @@
 import os
 import argparse
 import torch
+import time
 import torch.utils.data as Data
 from torch.autograd import Variable
 import torchvision
@@ -129,6 +130,7 @@ class AutoEncoder(torch.nn.Module):
 
 
 def train():
+    start_time = time.time()
     model_name = 'model/AE_model-%s.pkl' % args.dataset
     if os.path.exists(model_name) and args.load_model:
         print('Loading model ...')
@@ -144,6 +146,7 @@ def train():
 
     for epoch in range(args.epoch):
         for step, (x, y) in enumerate(train_loader):
+            step_time = time.time()
             # b_x = Variable(x.view(-1, 3, HEIGHT, WEIGHT))  # batch x, shape (batch, 32*32*3)
             b_x = Variable(x).cuda() if cuda else Variable(x)
             b_y = b_x.detach().cuda() if cuda else b_x.detach()  # batch y, shape (batch, 32*32*3)
@@ -166,7 +169,9 @@ def train():
 
             if step % 10 == 0:
                 torch.save(autoencoder, model_name)
-                print('Epoch:', epoch, 'Step:', step, '|', 'train loss %.6f:' % loss.data[0])
+                print('Epoch:', epoch, 'Step:', step, '|', 'train loss %.6f; Time cost %.2f s'
+                      % (loss.data[0], time.time() - step_time))
+    print('Finished. Totally cost %.2f' % time.time() - start_time)
 
 
 if __name__ == '__main__':
