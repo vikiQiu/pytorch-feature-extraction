@@ -20,7 +20,7 @@ parser.add_argument("--model", type=str, default='conv',
 # parser.add_argument("--img-transform", type=str, default='default', help="Image Transformer")
 parser.add_argument("--img-loader", type=str, default='default', help="Image Loader")
 parser.add_argument("--epoch", type=int, default=100, help="Epoch number.")
-parser.add_argument("--batch-size", type=int, default=64, help="Batch size.")
+parser.add_argument("--batch-size", type=int, default=256, help="Batch size.")
 parser.add_argument("--lr", type=int, default=1e-4, help="Learning rate.")
 parser.add_argument("--img-size", type=int, default=224, help="Height Weight of the training images after transform.")
 parser.add_argument('--load-model', action="store_true", default=False)
@@ -60,7 +60,7 @@ def init_model(model):
     if model == 'conv':
         encoder, decoder = SimpleEncoder(), SimpleDecoder()
     elif 'vgg' in model:
-        encoder, decoder = VGGEncoder(model), VGGDecoder(model)
+        encoder, decoder = VGGEncoder(model), VGGDecoder('Simple')
     else:
         print('Model not found! Use "conv" instead.')
         encoder, decoder = SimpleEncoder(), SimpleDecoder()
@@ -78,13 +78,10 @@ class AutoEncoder(torch.nn.Module):
         super(AutoEncoder, self).__init__()
 
         self.encoder = encoder
-
         self.decoder = decoder
 
     def forward(self, x):
-        # x = x.view(-1, 3, HEIGHT, WEIGHT)
         encode = self.encoder(x)
-
         decode = self.decoder(encode)
         return encode, decode
 
@@ -92,6 +89,7 @@ class AutoEncoder(torch.nn.Module):
 def train():
     start_time = time.time()
     model_name = 'model/AE_%s_model-%s.pkl' % (args.model, args.dataset)
+    pic_dir = 'res/AE_%s-%s/' % (args.model, args.dataset)
     if os.path.exists(model_name) and args.load_model:
         print('Loading model ...')
         autoencoder = torch.load(model_name).to(device)
@@ -102,7 +100,7 @@ def train():
     optimizer = torch.optim.Adam(list(autoencoder.parameters()), lr=args.lr)
     loss_func = nn.MSELoss()
 
-    check_dir_exists(['res/', 'model', 'res/AE-'+args.dataset])
+    check_dir_exists(['res/', 'model', pic_dir])
 
     for epoch in range(args.epoch):
         step_time = time.time()
@@ -115,13 +113,9 @@ def train():
 
             if step % 100 == 0:
                 img_to_save = decoded.data
-                save_image(img_to_save, 'res/AE-%s/%s-%s.jpg' % (args.dataset, epoch, step))
+                save_image(img_to_save, '%s/%s-%s.jpg' % (pic_dir, epoch, step))
             # io.imsave('.xxx.jpg',img_to_save[0])
 
-            # print('wwwwww')
-            # print(type(decoded))
-            # print(type(b_y))
-            # b_y.type_as(decoded)
             loss = loss_func(decoded, b_y)  # mean square error
             optimizer.zero_grad()  # clear gradients for this training step
             loss.backward()  # backpropagation, compute gradients
@@ -132,7 +126,7 @@ def train():
                 print('Epoch:', epoch, 'Step:', step, '|', 'train loss %.6f; Time cost %.2f s'
                       % (loss.data[0], time.time() - step_time))
                 step_time = time.time()
-    print('Finished. Totally cost %.2f' % time.time() - start_time)
+    print('Finished. Totally cost %.2f' % (time.time() - start_time))
 
 
 if __name__ == '__main__':

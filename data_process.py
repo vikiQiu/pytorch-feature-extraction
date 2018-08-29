@@ -140,7 +140,7 @@ if __name__ == '__main__':
     # get_all_xml_labels(dir_path, Debug=True)
 
     '''TEST get_imagenet1000_val_labels()'''
-    get_imagenet1000_val_labels(label_dir, img_dir, 'labels.csv', Debug=True)
+    # get_imagenet1000_val_labels(label_dir, img_dir, 'labels.csv', Debug=True)
 
     # TEST ImageNetDataset
-    # testImageNetDataset(img_dir, label_dir, fix_size_transform(256))
+    testImageNetDataset(img_dir, label_dir, fix_size_transform(256))

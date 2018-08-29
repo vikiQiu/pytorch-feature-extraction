@@ -17,7 +17,7 @@ class SimpleEncoder(nn.Module):
                 kernel_size=3,
                 stride=2,
                 padding=1,
-            ),  # 32*32*3->16*16*64
+            ),
             nn.LeakyReLU(),
 
             nn.Conv2d(
@@ -26,7 +26,7 @@ class SimpleEncoder(nn.Module):
                 kernel_size=3,
                 stride=2,
                 padding=1,
-            ),  # 16*16*64->8*8*128
+            ),
             nn.BatchNorm2d(num_features=128, affine=True),  # num_features=batch_size x num_features [x width]
             nn.LeakyReLU(),
 
@@ -36,7 +36,7 @@ class SimpleEncoder(nn.Module):
                 kernel_size=3,
                 stride=2,
                 padding=1,
-            ),  # 8*8*128->4*4*256 Total 4096 feature
+            ),
             nn.BatchNorm2d(num_features=256, affine=True),
             nn.LeakyReLU(),
         )
@@ -124,6 +124,7 @@ class VGGEncoder(nn.Module):
                 else:
                     layers += [conv2d, nn.ReLU(inplace=True)]
                 in_channels = v
+        layers += [nn.Conv2d(512, 32, kernel_size=1)]
         return nn.Sequential(*layers)
 
 
@@ -137,9 +138,10 @@ class VGGDecoder(nn.Module):
             'D': [64, 64, 'M', 128, 128, 'M', 256, 256, 256, 'M', 512, 512, 512, 'M', 512, 512, 512, 'M'],
             'E': [64, 64, 'M', 128, 128, 'M', 256, 256, 256, 256, 'M', 512, 512, 512, 512, 'M', 512, 512,
                   512, 512, 'M'],
+            'S': [64, 'M', 128, 'M', 256, 'M', 512, 'M', 512, 'M']
         }
 
-        model_list = {'vgg11': 'A', 'vgg13': 'B', 'vgg16': 'D', 'vgg19': 'E'}
+        model_list = {'vgg11': 'A', 'vgg13': 'B', 'vgg16': 'D', 'vgg19': 'E', 'Simple': 'S'}
         self.decoder = self._make_vgg_layers(cfg[model_list[model]], batch_norm)
 
     def forward(self, x):
@@ -148,19 +150,21 @@ class VGGDecoder(nn.Module):
 
     @staticmethod
     def _make_vgg_layers(cfg, batch_norm=False):
-        layers = []
-        in_channels = 512
+        in_channels = int(512/8)
+        layers = [nn.Conv2d(32, in_channels, kernel_size=1)]
         for v in cfg[::-1]:
             if v == 'M':
                 layers += [nn.ConvTranspose2d(in_channels=in_channels, out_channels=in_channels,
                                               kernel_size=4, stride=2, padding=1)]
             else:
-                conv2d = nn.Conv2d(in_channels, v, kernel_size=3, padding=1)
+                vv = int(v/8)
+                conv2d = nn.Conv2d(in_channels, vv, kernel_size=3, padding=1)
                 if batch_norm:
-                    layers += [conv2d, nn.BatchNorm2d(v), nn.ReLU(inplace=True)]
+                    layers += [conv2d, nn.BatchNorm2d(vv), nn.ReLU(inplace=True)]
                 else:
                     layers += [conv2d, nn.ReLU(inplace=True)]
-                in_channels = v
+                in_channels = vv
         conv2d = nn.Conv2d(in_channels, 3, kernel_size=3, padding=1)
-        layers += [conv2d, nn.LeakyReLU(inplace=True)]
+        layers += [conv2d, nn.Sigmoid()]
+        # layers += [conv2d, nn.LeakyReLU()]
         return nn.Sequential(*layers)
