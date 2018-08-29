@@ -47,9 +47,10 @@ def get_xml_label(dir_path, file_name):
 
 def filter_label(not_exists, label_list, img_list):
     for pic_name in not_exists:
-        ind = img_list.index(pic_name)
-        img_list.remove(pic_name)
-        label_list.remove(label_list[ind])
+        if pic_name in img_list:
+            ind = img_list.index(pic_name)
+            img_list.remove(pic_name)
+            label_list.remove(label_list[ind])
     return img_list, label_list
 
 

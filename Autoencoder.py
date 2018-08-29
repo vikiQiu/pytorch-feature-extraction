@@ -46,7 +46,7 @@ def getDataLoader(args):
         label_dir = os.path.join(args.dataset_dir, 'ILSVRC2012_bbox_val_v3')
         img_dir= os.path.join(args.dataset_dir, 'ILSVRC2012_img_val')
         dataset = ImageNetDataset(img_dir, label_dir,
-                                  img_transform=transformers['crop'+args.img_size],
+                                  img_transform=transformers['crop'+str(args.img_size)],
                                   loader=loaders[args.img_loader])
         return Data.DataLoader(dataset=dataset, batch_size=args.batch_size, shuffle=True, **kwargs)
     pass
