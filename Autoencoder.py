@@ -2,9 +2,10 @@ import os
 import argparse
 import torch
 import time
+import json
 import torch.utils.data as Data
 from torch.autograd import Variable
-import torchvision
+import torchsummary
 import torch.nn as nn
 from torchvision.utils import save_image
 from data_process import ImageNetDataset, transformers, loaders
@@ -24,6 +25,7 @@ parser.add_argument("--batch-size", type=int, default=256, help="Batch size.")
 parser.add_argument("--lr", type=int, default=1e-4, help="Learning rate.")
 parser.add_argument("--img-size", type=int, default=224, help="Height Weight of the training images after transform.")
 parser.add_argument('--load-model', action="store_true", default=False)
+parser.add_argument('--evaluate', action="store_true", default=False)
 parser.add_argument('--use-gpus', action='store_false', dest='cuda', default=True)
 parser.add_argument("--feature-channel", type=int, default=None, help="The output channels of encoder.", dest='fea_c')
 
@@ -86,6 +88,9 @@ class AutoEncoder(torch.nn.Module):
         decode = self.decoder(encode)
         return encode, decode
 
+    def encode(self, x):
+        return self.encoder(x)
+
 
 def train():
     start_time = time.time()
@@ -131,26 +136,45 @@ def train():
 
 
 def evaluate():
+    '''
+    Evaluate the AE model on feature extraction work:
+        1. Extract features from encode result in AE.
+        2. Find top k similar pictures and compare their labels
+    '''
     model_name = 'model/AE_%s%s_model-%s.pkl' % (args.model, '' if args.fea_c is None else args.fea_c, args.dataset)
+    output_file = 'feature/AE_%s%s_model-%s.json' % (args.model, '' if args.fea_c is None else args.fea_c, args.dataset)
     assert os.path.exists(model_name)
     print('Loading model ...')
-    autoencoder = torch.load(model_name).to(device)
+    autoencoder = torch.load(model_name, map_location='gpu' if cuda else 'cpu').to(device)
+    print(torchsummary.summary(autoencoder, input_size=(3, HEIGHT, WEIGHT)))
     train_loader = getDataLoader(args)
 
-    step_time = time.time()
+    check_dir_exists(['feature'])
+
+    features = []
+    labels = []
     for step, (x, y) in enumerate(train_loader):
         b_x = Variable(x).cuda() if cuda else Variable(x)
+        labels = list(y)
+        labels.extend(y)
 
         encoded, _ = autoencoder(b_x)
 
-        if step % 1 == 0:
-            img_to_save = encoded.data
-            print(img_to_save)
+        f = encoded.data.view(args.batch_size, -1).numpy().tolist()
+        features.extend(f)
 
+        if step % 10 == 0:
+            print('Step %d finished.' % step)
+
+    out = {'features': features, 'labels': labels}
+    with open(output_file, 'w') as f:
+        json.dump(out, f)
     # print('Finished. Totally cost %.2f' % (time.time() - start_time))
 
 
 if __name__ == '__main__':
-    train()
-    # evaluate()
-
+    if args.evaluate:
+        evaluate()
+    else:
+        train()
+    print(args.evaluate)
