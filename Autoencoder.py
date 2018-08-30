@@ -145,7 +145,10 @@ def evaluate():
     output_file = 'feature/AE_%s%s_model-%s.json' % (args.model, '' if args.fea_c is None else args.fea_c, args.dataset)
     assert os.path.exists(model_name)
     print('Loading model ...')
-    autoencoder = torch.load(model_name, map_location='gpu' if cuda else 'cpu').to(device)
+    if cuda:
+        autoencoder = torch.load(model_name).to(device)
+    else:
+        autoencoder = torch.load(model_name, map_location='cpu').to(device)
     # print(torchsummary.summary(autoencoder, input_size=(3, HEIGHT, WEIGHT)))
     train_loader = getDataLoader(args)
 
@@ -154,13 +157,15 @@ def evaluate():
     features = []
     labels = []
     for step, (x, y) in enumerate(train_loader):
+        print(x.shape[0])
         b_x = Variable(x).cuda() if cuda else Variable(x)
         labels = list(y)
         labels.extend(y)
 
         encoded, _ = autoencoder(b_x)
 
-        f = encoded.data.view(args.batch_size, -1).numpy().tolist()
+        f = encoded.cpu() if cuda else f
+        f = f.data.view(b_x.shape[0], -1).numpy().tolist()
         features.extend(f)
 
         if step % 10 == 0:
