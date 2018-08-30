@@ -5,7 +5,7 @@ import time
 import json
 import torch.utils.data as Data
 from torch.autograd import Variable
-import torchsummary
+# import torchsummary
 import torch.nn as nn
 from torchvision.utils import save_image
 from data_process import ImageNetDataset, transformers, loaders
@@ -146,7 +146,7 @@ def evaluate():
     assert os.path.exists(model_name)
     print('Loading model ...')
     autoencoder = torch.load(model_name, map_location='gpu' if cuda else 'cpu').to(device)
-    print(torchsummary.summary(autoencoder, input_size=(3, HEIGHT, WEIGHT)))
+    # print(torchsummary.summary(autoencoder, input_size=(3, HEIGHT, WEIGHT)))
     train_loader = getDataLoader(args)
 
     check_dir_exists(['feature'])
