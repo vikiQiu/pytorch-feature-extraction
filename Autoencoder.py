@@ -61,7 +61,7 @@ def init_model(model):
     if model == 'conv':
         encoder, decoder = SimpleEncoder(), SimpleDecoder()
     elif 'vgg' in model:
-        encoder, decoder = VGGEncoder(model), VGGDecoder(model)
+        encoder, decoder = VGGEncoder(model, args.fea_c), VGGDecoder(model, args.fea_c)
     else:
         print('Model not found! Use "conv" instead.')
         encoder, decoder = SimpleEncoder(), SimpleDecoder()
@@ -130,6 +130,27 @@ def train():
     print('Finished. Totally cost %.2f' % (time.time() - start_time))
 
 
+def evaluate():
+    model_name = 'model/AE_%s%s_model-%s.pkl' % (args.model, '' if args.fea_c is None else args.fea_c, args.dataset)
+    assert os.path.exists(model_name)
+    print('Loading model ...')
+    autoencoder = torch.load(model_name).to(device)
+    train_loader = getDataLoader(args)
+
+    step_time = time.time()
+    for step, (x, y) in enumerate(train_loader):
+        b_x = Variable(x).cuda() if cuda else Variable(x)
+
+        encoded, _ = autoencoder(b_x)
+
+        if step % 1 == 0:
+            img_to_save = encoded.data
+            print(img_to_save)
+
+    # print('Finished. Totally cost %.2f' % (time.time() - start_time))
+
+
 if __name__ == '__main__':
     train()
+    # evaluate()
 
