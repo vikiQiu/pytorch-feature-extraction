@@ -112,12 +112,13 @@ class ImageNetDataset(Data.Dataset):
 
     def __getitem__(self, index):
         img_path = self.img_list[index]
+        img_name = os.path.basename(img_path)
         label = self.label_list[index]
         img = self.loader(img_path)
         # img = img_path
         if self.img_transform is not None:
             img = self.img_transform(img)
-        return img, label
+        return img, (label, img_name)
 
     def __len__(self):
         return len(self.label_list)
@@ -140,7 +141,7 @@ if __name__ == '__main__':
     # get_all_xml_labels(dir_path, Debug=True)
 
     '''TEST get_imagenet1000_val_labels()'''
-    # get_imagenet1000_val_labels(label_dir, img_dir, 'labels.csv', Debug=True)
+    get_imagenet1000_val_labels(label_dir, img_dir, 'labels.csv', Debug=True)
 
     # TEST ImageNetDataset
-    testImageNetDataset(img_dir, label_dir, fix_size_transform(256))
+    # testImageNetDataset(img_dir, label_dir, fix_size_transform(256))

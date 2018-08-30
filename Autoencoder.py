@@ -3,6 +3,7 @@ import argparse
 import torch
 import time
 import json
+import numpy as np
 import torch.utils.data as Data
 from torch.autograd import Variable
 # import torchsummary
@@ -28,6 +29,7 @@ parser.add_argument('--load-model', action="store_true", default=False)
 parser.add_argument('--evaluate', action="store_true", default=False)
 parser.add_argument('--use-gpus', action='store_false', dest='cuda', default=True)
 parser.add_argument("--feature-channel", type=int, default=None, help="The output channels of encoder.", dest='fea_c')
+parser.add_argument('--top-k', type=int, default=10)
 
 args = parser.parse_args()
 cuda = args.cuda and torch.cuda.is_available()
@@ -107,6 +109,7 @@ def train():
     loss_func = nn.MSELoss()
 
     check_dir_exists(['res/', 'model', pic_dir])
+    loss_val = None
 
     for epoch in range(args.epoch):
         step_time = time.time()
@@ -127,6 +130,8 @@ def train():
             loss.backward()  # backpropagation, compute gradients
             optimizer.step()
 
+            loss_val = 0.99*loss_val + 0.01*loss.data[0] if loss_val is not None else loss.data[0]
+
             if step % 10 == 0:
                 torch.save(autoencoder, model_name)
                 print('Epoch:', epoch, 'Step:', step, '|', 'train loss %.6f; Time cost %.2f s'
@@ -135,14 +140,8 @@ def train():
     print('Finished. Totally cost %.2f' % (time.time() - start_time))
 
 
-def evaluate():
-    '''
-    Evaluate the AE model on feature extraction work:
-        1. Extract features from encode result in AE.
-        2. Find top k similar pictures and compare their labels
-    '''
+def generate_feature(output_file):
     model_name = 'model/AE_%s%s_model-%s.pkl' % (args.model, '' if args.fea_c is None else args.fea_c, args.dataset)
-    output_file = 'feature/AE_%s%s_model-%s.json' % (args.model, '' if args.fea_c is None else args.fea_c, args.dataset)
     assert os.path.exists(model_name)
     print('Loading model ...')
     if cuda:
@@ -174,7 +173,58 @@ def evaluate():
     out = {'features': features, 'labels': labels}
     with open(output_file, 'w') as f:
         json.dump(out, f)
-    # print('Finished. Totally cost %.2f' % (time.time() - start_time))
+
+    return out
+
+
+def cal_cos(fea):
+    '''
+    cos matrix
+    :param fea: [[features]]
+    :return:
+    '''
+    print('Calculating cos matrix')
+    feature_mat = np.round(np.array(fea), 8).T
+    d = feature_mat.T @ feature_mat
+    norm = (feature_mat * feature_mat).sum(0, keepdims=True) ** .5
+    similar_mat = d / norm / norm.T
+
+    # fea = np.array(fea)
+    # s = np.sqrt(np.sum(fea**2, 1))
+
+    return similar_mat
+
+
+def cal_accuracy(similar_mat, labels):
+    print('Calculating accuracy')
+    accuracy = []
+    similar_pic = {}
+    for i, (label, img_name) in enumerate(labels):
+        inds = np.argsort(similar_mat[i])[::-1][1:(args.top_k + 1)]
+        similar_pic[img_name] = [[labels[ind][1], labels[ind][0] == label] for ind in inds]
+        accu = np.mean([labels[ind][0] == label for ind in inds])
+        accuracy.append(accu)
+    print(np.mean(accuracy))
+    return accuracy, similar_pic
+
+
+def evaluate():
+    '''
+    Evaluate the AE model on feature extraction work:
+        1. Extract features from encode result in AE.
+        2. Find top k similar pictures and compare their labels
+    '''
+    output_file = 'feature/AE_%s%s_model-%s.json' % (args.model, '' if args.fea_c is None else args.fea_c, args.dataset)
+    if os.path.exists(output_file):
+        print('Loading features...')
+        with open(output_file) as f:
+            res = json.load(f)
+    else:
+        res = generate_feature(output_file)
+
+    print(res['labels'][:100])
+    similar_mat = cal_cos(res['features'][:1000])
+    accuracy, similar_pic = cal_accuracy(similar_mat, res['labels'])
 
 
 if __name__ == '__main__':
@@ -182,4 +232,3 @@ if __name__ == '__main__':
         evaluate()
     else:
         train()
-    print(args.evaluate)
