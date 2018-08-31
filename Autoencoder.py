@@ -206,7 +206,7 @@ def cal_accuracy(similar_mat, labels, model_name):
     accuracy = []
     similar_pic = {}
     similar_pic_dir = 'similar_pic/%s/' % model_name
-    check_dir_exists(similar_pic_dir)
+    check_dir_exists(['similar_pic/', similar_pic_dir])
 
     for i, (label, img_name) in enumerate(labels):
         inds = np.argsort(similar_mat[i])[::-1][1:(args.top_k + 1)]
@@ -214,9 +214,10 @@ def cal_accuracy(similar_mat, labels, model_name):
         accu = np.mean([labels[ind][0] == label for ind in inds])
         accuracy.append(accu)
     print(np.mean(accuracy))
+    out = {'similar_pic': similar_pic, 'accuracy': accuracy}
 
-    with open(os.path.join(similar_pic_dir, 'similar_pic_%s' % model_name), 'w') as f:
-        json.dump(similar_pic, f)
+    with open(os.path.join(similar_pic_dir, 'similar_res_%s' % model_name), 'w') as f:
+        json.dump(out, f)
     return accuracy, similar_pic
 
 
