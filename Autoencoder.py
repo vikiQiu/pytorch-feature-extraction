@@ -236,7 +236,7 @@ def evaluate():
     else:
         res = generate_feature(output_file)
     similar_mat = cal_cos(res['features'])
-    accuracy, similar_pic = cal_accuracy(similar_mat, res['labels'])
+    accuracy, similar_pic = cal_accuracy(similar_mat, res['labels'], model_name)
 
 
 if __name__ == '__main__':
