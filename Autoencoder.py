@@ -29,7 +29,7 @@ parser.add_argument('--load-model', action="store_true", default=False)
 parser.add_argument('--evaluate', action="store_true", default=False)
 parser.add_argument('--use-gpus', action='store_false', dest='cuda', default=True)
 parser.add_argument("--feature-channel", type=int, default=None, help="The output channels of encoder.", dest='fea_c')
-parser.add_argument('--top-k', type=int, default=10)
+parser.add_argument('--top-k', type=int, default=5)
 
 args = parser.parse_args()
 cuda = args.cuda and torch.cuda.is_available()
@@ -201,16 +201,22 @@ def cal_cos(fea):
     return similar_mat
 
 
-def cal_accuracy(similar_mat, labels):
+def cal_accuracy(similar_mat, labels, model_name):
     print('Calculating accuracy')
     accuracy = []
     similar_pic = {}
+    similar_pic_dir = 'similar_pic/%s/' % model_name
+    check_dir_exists(similar_pic_dir)
+
     for i, (label, img_name) in enumerate(labels):
         inds = np.argsort(similar_mat[i])[::-1][1:(args.top_k + 1)]
         similar_pic[img_name] = [[labels[ind][1], labels[ind][0] == label] for ind in inds]
         accu = np.mean([labels[ind][0] == label for ind in inds])
         accuracy.append(accu)
     print(np.mean(accuracy))
+
+    with open(os.path.join(similar_pic_dir, 'similar_pic_%s' % model_name), 'w') as f:
+        json.dump(similar_pic, f)
     return accuracy, similar_pic
 
 
@@ -220,7 +226,8 @@ def evaluate():
         1. Extract features from encode result in AE.
         2. Find top k similar pictures and compare their labels
     '''
-    output_file = 'feature/AE_%s%s_model-%s.json' % (args.model, '' if args.fea_c is None else args.fea_c, args.dataset)
+    model_name = 'AE_%s%s_model-%s/' % (args.model, '' if args.fea_c is None else args.fea_c, args.dataset)
+    output_file = 'feature/%s.json' % model_name
 
     if os.path.exists(output_file):
         print('Loading features...')
@@ -228,8 +235,7 @@ def evaluate():
             res = json.load(f)
     else:
         res = generate_feature(output_file)
-    print(res['labels'][:100])
-    similar_mat = cal_cos(res['features'][:1000])
+    similar_mat = cal_cos(res['features'])
     accuracy, similar_pic = cal_accuracy(similar_mat, res['labels'])
 
 
