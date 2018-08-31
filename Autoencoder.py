@@ -141,6 +141,13 @@ def train():
 
 
 def generate_feature(output_file):
+    '''
+    Generate feature of given dataset.
+        1. laod model
+        2. for each data in train_loader => (encoded, (label, img_name))
+        3. output a dictionary {'features': [encoded], 'labels': [(label, img_name)]}
+    :param output_file: output file name
+    '''
     model_name = 'model/AE_%s%s_model-%s.pkl' % (args.model, '' if args.fea_c is None else args.fea_c, args.dataset)
     assert os.path.exists(model_name)
     print('Loading model ...')
@@ -156,14 +163,13 @@ def generate_feature(output_file):
     features = []
     labels = []
     for step, (x, y) in enumerate(train_loader):
-        print(x.shape[0])
         b_x = Variable(x).cuda() if cuda else Variable(x)
-        labels = list(y)
-        labels.extend(y)
+        label = [(y[0][i], y[1][i]) for i in range(len(y[0]))]
+        labels.extend(label)
 
         encoded, _ = autoencoder(b_x)
 
-        f = encoded.cpu() if cuda else f
+        f = encoded.cpu() if cuda else encoded
         f = f.data.view(b_x.shape[0], -1).numpy().tolist()
         features.extend(f)
 
@@ -215,13 +221,13 @@ def evaluate():
         2. Find top k similar pictures and compare their labels
     '''
     output_file = 'feature/AE_%s%s_model-%s.json' % (args.model, '' if args.fea_c is None else args.fea_c, args.dataset)
+
     if os.path.exists(output_file):
         print('Loading features...')
         with open(output_file) as f:
             res = json.load(f)
     else:
         res = generate_feature(output_file)
-
     print(res['labels'][:100])
     similar_mat = cal_cos(res['features'][:1000])
     accuracy, similar_pic = cal_accuracy(similar_mat, res['labels'])
