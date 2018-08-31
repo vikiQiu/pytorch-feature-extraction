@@ -226,7 +226,7 @@ def evaluate():
         1. Extract features from encode result in AE.
         2. Find top k similar pictures and compare their labels
     '''
-    model_name = 'AE_%s%s_model-%s/' % (args.model, '' if args.fea_c is None else args.fea_c, args.dataset)
+    model_name = 'AE_%s%s_model-%s' % (args.model, '' if args.fea_c is None else args.fea_c, args.dataset)
     output_file = 'feature/%s.json' % model_name
 
     if os.path.exists(output_file):
