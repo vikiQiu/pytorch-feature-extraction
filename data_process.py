@@ -1,16 +1,25 @@
 import os
+import torch
+import numpy as np
 import pandas as pd
 from PIL import Image
 import torch.utils.data as Data
 import torchvision.transforms as transforms
+from torchvision.utils import save_image
 import xml.etree.ElementTree as ET
 
 
+################################################################
+# Data Loader
+################################################################
 def default_loader(img):
     img = Image.open(img).convert('RGB')
     return img
 
 
+################################################################
+# Data Transformer
+################################################################
 def fix_size_transform(size):
     trans = transforms.Compose([
         transforms.Resize(size),
@@ -31,6 +40,49 @@ transformers = {'default': default_transformer, 'crop224': fix_size_transform(22
 loaders = {'default': default_loader}
 
 
+################################################################
+# Dataset and Data Loader
+################################################################
+
+def getDataset(args):
+    '''
+        Now support ['ImageNet1000-val']。
+        Add more dataset in future.
+        '''
+    if args.dataset == 'ImageNet1000-val':
+        label_dir = os.path.join(args.dataset_dir, 'ILSVRC2012_bbox_val_v3')
+        img_dir = os.path.join(args.dataset_dir, 'ILSVRC2012_img_val')
+        dataset = ImageNetDataset(img_dir, label_dir,
+                                  img_transform=transformers['crop' + str(args.img_size)],
+                                  loader=loaders[args.img_loader])
+        return dataset
+    pass
+
+
+def getDataLoader(args, kwargs):
+    dataset = getDataset(args)
+    return Data.DataLoader(dataset=dataset, batch_size=args.batch_size, shuffle=True, **kwargs)
+
+
+################################################################
+# Save similar pictures
+################################################################
+def save_similar_pic(similar_pic, k, similar_pic_dir, img_dir):
+    for img_name in list(similar_pic.keys())[:k]:
+        img = default_loader(os.path.join(img_dir, img_name))
+        img = [fix_size_transform(224)(img).numpy()]
+        for (i, sim) in similar_pic[img_name]:
+            sim_img = default_loader(os.path.join(img_dir, i))
+            img.append(fix_size_transform(224)(sim_img).numpy())
+
+        img = torch.Tensor(img)
+        save_image(img, '%s/%s' % (similar_pic_dir, img_name))
+    return
+
+
+################################################################
+# Get ILSVRC2012 dataset label from XML
+################################################################
 def get_xml_label(dir_path, file_name):
     tree = ET.ElementTree(file=os.path.join(dir_path, file_name))
     label, pic_name = '', ''
@@ -99,6 +151,9 @@ def get_imagenet1000_val_labels(dir_path, img_dir, file_name='labels.csv', Debug
     return img_list, label_list
 
 
+################################################################
+# Get ILSVRC2012 set
+################################################################
 class ImageNetDataset(Data.Dataset):
     def __init__(self,
                  img_dir,
