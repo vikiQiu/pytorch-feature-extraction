@@ -80,7 +80,10 @@ def train():
     pic_dir = 'res/VAE_%s%s-%s/' % (args.model, '' if args.fea_c is None else args.fea_c, args.dataset)
     if os.path.exists(model_name) and args.load_model:
         print('Loading model ...')
-        vae = torch.load(model_name).to(device)
+        if cuda:
+            vae = torch.load(model_name).to(device)
+        else:
+            vae = torch.load(model_name, map_location='cpu')
     else:
         vae = init_model(args.model).to(device)
 
@@ -99,7 +102,7 @@ def train():
             decoded, mu, std = vae(b_x)
 
             if step % 100 == 0:
-                img_to_save = decoded.data
+                img_to_save = torch.cat([b_x.data, decoded.data])
                 save_image(img_to_save, '%s/%s-%s.jpg' % (pic_dir, epoch, step))
             # io.imsave('.xxx.jpg',img_to_save[0])
 
