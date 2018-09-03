@@ -11,6 +11,7 @@ from torchvision.utils import save_image
 from data_process import getDataLoader
 from utils.arguments import train_args
 from utils.utils import check_dir_exists
+from torch.nn import functional as F
 from model import SimpleEncoder, SimpleDecoder, VGGEncoder, VGGDecoder
 
 
@@ -31,39 +32,60 @@ def init_model(model):
     else:
         print('Model not found! Use "conv" instead.')
         encoder, decoder = SimpleEncoder(), SimpleDecoder()
-    ae = AutoEncoder(encoder, decoder)
-    return ae
+    vae = VAE(encoder, decoder)
+    return vae
 
 
-class AutoEncoder(torch.nn.Module):
+class VAE(torch.nn.Module):
     def __init__(self, encoder, decoder):
-        super(AutoEncoder, self).__init__()
+        super(VAE, self).__init__()
 
-        self.encoder, _ = encoder
+        self.encoder = encoder
+        self.encode_channel = encoder.get_out_channel()
+        self.mu_layer = nn.Conv2d(self.encode_channel, self.encode_channel, kernel_size=1)
+        self.std_layer = nn.Conv2d(self.encode_channel, self.encode_channel, kernel_size=1)
         self.decoder = decoder
 
     def forward(self, x):
-        encode = self.encoder(x)
-        decode = self.decoder(encode)
-        return encode, decode
+        encoded = self.encoder(x)
+        mu = self.mu_layer(encoded)
+        std = self.std_layer(encoded)
+        z = self.reparameterize(mu, std)
+        decoded = self.decoder(z)
+        return decoded, mu, std
 
-    def encode(self, x):
-        return self.encoder(x)
+    def reparameterize(self, mu, logvar):
+        if self.training:
+            std = torch.sqrt(torch.exp(0.5 * logvar))
+            eps = torch.randn_like(std)
+            return eps.mul(std).add_(mu)
+        else:
+            return mu
+
+
+def loss_function(recon_x, x, mu, std):
+    BCE = F.mse_loss(recon_x, x)
+
+    # KLD = -0.5 * torch.sum(1 + logvar - mu.pow(2) - logvar.exp())
+    var_sum = torch.sum(std.pow(2), (1, 2, 3))
+    KLD = 0.5 * (-torch.log(var_sum) + torch.sum(mu.pow(2), (1, 2, 3)) + var_sum)
+    KLD = torch.mean(KLD)/(x.shape[1]*x.shape[2]*x.shape[3])
+
+    return BCE + KLD, BCE, KLD
 
 
 def train():
     start_time = time.time()
-    model_name = 'model/AE_%s%s_model-%s.pkl' % (args.model, '' if args.fea_c is None else args.fea_c, args.dataset)
-    pic_dir = 'res/AE_%s%s-%s/' % (args.model, '' if args.fea_c is None else args.fea_c, args.dataset)
+    model_name = 'model/VAE_%s%s_model-%s.pkl' % (args.model, '' if args.fea_c is None else args.fea_c, args.dataset)
+    pic_dir = 'res/VAE_%s%s-%s/' % (args.model, '' if args.fea_c is None else args.fea_c, args.dataset)
     if os.path.exists(model_name) and args.load_model:
         print('Loading model ...')
-        autoencoder = torch.load(model_name).to(device)
+        vae = torch.load(model_name).to(device)
     else:
-        autoencoder = init_model(args.model).to(device)
+        vae = init_model(args.model).to(device)
 
     train_loader = getDataLoader(args, kwargs)
-    optimizer = torch.optim.Adam(list(autoencoder.parameters()), lr=args.lr)
-    loss_func = nn.MSELoss()
+    optimizer = torch.optim.Adam(list(vae.parameters()), lr=args.lr)
 
     check_dir_exists(['res/', 'model', pic_dir])
     loss_val = None
@@ -74,14 +96,14 @@ def train():
             b_x = Variable(x).cuda() if cuda else Variable(x)
             b_y = b_x.detach().cuda() if cuda else b_x.detach()  # batch y, shape (batch, 32*32*3)
 
-            encoded, decoded = autoencoder(b_x)
+            decoded, mu, std = vae(b_x)
 
             if step % 100 == 0:
                 img_to_save = decoded.data
                 save_image(img_to_save, '%s/%s-%s.jpg' % (pic_dir, epoch, step))
             # io.imsave('.xxx.jpg',img_to_save[0])
 
-            loss = loss_func(decoded, b_y)  # mean square error
+            loss, bce, kld = loss_function(decoded, b_y, mu, std)  # mean square error
             optimizer.zero_grad()  # clear gradients for this training step
             loss.backward()  # backpropagation, compute gradients
             optimizer.step()
@@ -89,9 +111,9 @@ def train():
             loss_val = 0.99*loss_val + 0.01*loss.data[0] if loss_val is not None else loss.data[0]
 
             if step % 10 == 0:
-                torch.save(autoencoder, model_name)
-                print('Epoch:', epoch, 'Step:', step, '|', 'train loss %.6f; Time cost %.2f s'
-                      % (loss.data[0], time.time() - step_time))
+                torch.save(vae, model_name)
+                print('Epoch:', epoch, 'Step:', step, '|', 'train loss %.6f; KLD %.6f; BCE %.6f; Time cost %.2f s'
+                      % (loss_val, kld, bce, time.time() - step_time))
                 step_time = time.time()
     print('Finished. Totally cost %.2f' % (time.time() - start_time))
 

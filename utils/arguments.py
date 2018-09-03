@@ -33,7 +33,7 @@ def evaluate_args():
                         help="Dataset to train. Now support ['ImageNet1000-val'].")
     parser.add_argument("--dataset-dir", type=str, default='..\data\ILSVRC2012\\', help="Dataset Directory")
     parser.add_argument("--model", type=str, default='conv',
-                        help="Dataset to train. Now support ['conv', 'vgg11', 'vgg13', 'vgg16', 'vgg19']."
+                        help="The architecture of encoder. Now support ['conv', 'vgg11', 'vgg13', 'vgg16', 'vgg19']."
                              "'conv' is a simple network with 3 convolution layer."
                              "Decoder have the similar architecture as the encoder.")
     parser.add_argument("--img-loader", type=str, default='default', help="Image Loader")

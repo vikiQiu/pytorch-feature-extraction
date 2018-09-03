@@ -45,6 +45,9 @@ class SimpleEncoder(nn.Module):
         encode = self.encoder(x)
         return encode
 
+    def get_out_channel(self):
+        return 256
+
 
 class SimpleDecoder(nn.Module):
     '''
@@ -110,6 +113,9 @@ class VGGEncoder(nn.Module):
     def forward(self, x):
         encode = self.encoder(x)
         return encode
+
+    def get_out_channel(self):
+        return 512 if self.out_channels is None else self.out_channels
 
     def _make_vgg_layers(self, cfg, batch_norm=False):
         layers = []
