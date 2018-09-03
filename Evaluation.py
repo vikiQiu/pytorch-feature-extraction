@@ -7,6 +7,7 @@ from data_process import getDataLoader
 from utils.arguments import evaluate_args
 from utils.utils import check_dir_exists
 from Autoencoder import AutoEncoder
+from VAE import VAE
 
 
 ################################################################
@@ -26,13 +27,13 @@ def generate_feature(output_file):
         3. output a dictionary {'features': [encoded], 'labels': [(label, img_name)]}
     :param output_file: output file name
     '''
-    model_name = 'model/AE_%s%s_model-%s.pkl' % (args.model, '' if args.fea_c is None else args.fea_c, args.dataset)
+    model_name = 'model/%s_%s%s_model-%s.pkl' % (args.main_model, args.model, '' if args.fea_c is None else args.fea_c, args.dataset)
     assert os.path.exists(model_name)
     print('Loading model ...')
     if cuda:
-        autoencoder = torch.load(model_name).to(device)
+        mol = torch.load(model_name).to(device)
     else:
-        autoencoder = torch.load(model_name, map_location='cpu').to(device)
+        mol = torch.load(model_name, map_location='cpu').to(device)
     # print(torchsummary.summary(autoencoder, input_size=(3, HEIGHT, WEIGHT)))
     train_loader = getDataLoader(args, kwargs)
 
@@ -45,9 +46,13 @@ def generate_feature(output_file):
         label = [(y[0][i], y[1][i]) for i in range(len(y[0]))]
         labels.extend(label)
 
-        encoded, _ = autoencoder(b_x)
+        if args.main_model == 'AE':
+            feature, _ = mol(b_x)
+        elif args.main_model == 'VAE':
+            _, mu, std = mol(b_x)
+            feature = torch.cat([mu, std])
 
-        f = encoded.cpu() if cuda else encoded
+        f = feature.cpu() if cuda else feature
         f = f.data.view(b_x.shape[0], -1).numpy().tolist()
         features.extend(f)
 
@@ -120,7 +125,7 @@ def evaluate():
         1. Extract features from encode result in AE.
         2. Find top k similar pictures and compare their labels
     '''
-    model_name = 'AE_%s%s_model-%s' % (args.model, '' if args.fea_c is None else args.fea_c, args.dataset)
+    model_name = '%s_%s%s_model-%s' % (args.main_model, args.model, '' if args.fea_c is None else args.fea_c, args.dataset)
     output_file = 'feature/%s.json' % model_name
 
     if os.path.exists(output_file):

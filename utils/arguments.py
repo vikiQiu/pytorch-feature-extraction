@@ -36,6 +36,7 @@ def evaluate_args():
                         help="The architecture of encoder. Now support ['conv', 'vgg11', 'vgg13', 'vgg16', 'vgg19']."
                              "'conv' is a simple network with 3 convolution layer."
                              "Decoder have the similar architecture as the encoder.")
+    parser.add_argument("--main-model", type=str, default='VAE', help="Main model. Now support ['AE', 'VAE'].")
     parser.add_argument("--img-loader", type=str, default='default', help="Image Loader")
     parser.add_argument("--batch-size", type=int, default=256, help="Batch size.")
     # parser.add_argument("--img-transform", type=str, default='default', help="Image Transformer")
