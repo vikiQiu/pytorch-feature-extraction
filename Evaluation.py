@@ -28,6 +28,7 @@ def generate_feature(output_file):
     :param output_file: output file name
     '''
     model_name = 'model/%s_%s%s_model-%s.pkl' % (args.main_model, args.model, '' if args.fea_c is None else args.fea_c, args.dataset)
+    print(model_name)
     assert os.path.exists(model_name)
     print('Loading model ...')
     if cuda:
@@ -112,6 +113,13 @@ def cal_accuracy(similar_mat, labels, model_name):
     return accuracy, similar_pic
 
 
+def normalize_feature(features):
+    features = np.array(features)
+    mu = features.mean(0)
+    std = features.std(0)
+    return (features - mu)/std
+
+
 # def evaluate_pic(similar_pic_dir, model_name):
 #     with open(os.path.join(similar_pic_dir, 'similar_res_%s.json' % model_name)) as f:
 #         out = json.load(f)
@@ -134,7 +142,7 @@ def evaluate():
             res = json.load(f)
     else:
         res = generate_feature(output_file)
-    similar_mat = cal_distance(res['features'])
+    similar_mat = cal_distance(normalize_feature(res['features']))
     accuracy, similar_pic = cal_accuracy(similar_mat, res['labels'], model_name)
 
 
