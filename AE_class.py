@@ -77,6 +77,7 @@ def train():
     check_dir_exists(['res/', 'model', pic_dir])
     loss_val = None
 
+    total, correct = 0, 0
     for epoch in range(args.epoch):
         step_time = time.time()
         for step, (x, y) in enumerate(train_loader):
@@ -94,18 +95,26 @@ def train():
 
             loss1 = loss_decoder(decoded, b_y)
             loss2 = loss_class(prob_class, label) # mean square error
-            loss = loss1 + loss2
+            loss = loss2 + loss1
             optimizer.zero_grad()  # clear gradients for this training step
-            loss.backward()  # backpropagation, compute gradients
+            if epoch % 2 == 0:
+                loss1.backward()
+            else:
+                loss2.backward()
             optimizer.step()
+
+            _, predicted = torch.max(prob_class.data, 1)
+            total += label.size(0)
+            correct += (predicted == label).sum().item()
 
             loss_val = 0.99*loss_val + 0.01*loss.data[0] if loss_val is not None else loss.data[0]
 
             if step % 10 == 0:
                 torch.save(autoencoder, model_name)
                 print('Epoch:', epoch, 'Step:', step, '|',
-                      'train loss %.6f; Time cost %.2f s; Classification error %.6f; Decoder error %.6f' %
-                      (loss.data[0], time.time() - step_time, loss2, loss1))
+                      'train loss %.6f; Time cost %.2f s; Classification error %.6f; Decoder error %.6f; Accuracy %.2f' %
+                      (loss.data[0], time.time() - step_time, loss2, loss1, correct/total))
+                correct, total = 0, 0
                 step_time = time.time()
     print('Finished. Totally cost %.2f' % (time.time() - start_time))
 
