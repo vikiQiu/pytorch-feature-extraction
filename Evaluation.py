@@ -4,7 +4,7 @@ import json
 import numpy as np
 from torch.autograd import Variable
 from data_process import getDataLoader
-from utils.arguments import evaluate_args
+from utils.eval_arguments import evaluate_args
 from utils.utils import check_dir_exists
 from Autoencoder import AutoEncoder
 from VAE import VAE

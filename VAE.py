@@ -15,16 +15,7 @@ from torch.nn import functional as F
 from model import SimpleEncoder, SimpleDecoder, VGGEncoder, VGGDecoder
 
 
-################################################################
-# Arguments
-################################################################
-args = train_args()
-cuda = args.cuda and torch.cuda.is_available()
-device = torch.device("cuda" if cuda else "cpu")
-kwargs = {'num_workers': 1, 'pin_memory': True} if args.cuda else {}
-
-
-def init_model(model):
+def init_model(model, args):
     if model == 'conv':
         encoder, decoder = SimpleEncoder(), SimpleDecoder()
     elif 'vgg' in model:
@@ -75,7 +66,16 @@ def loss_function(recon_x, x, mu, std):
 
 
 def train():
+    ################################################################
+    # Arguments
+    ################################################################
+    vae_args = train_args()
+    cuda = vae_args.cuda and torch.cuda.is_available()
+    device = torch.device("cuda" if cuda else "cpu")
+    kwargs = {'num_workers': 1, 'pin_memory': True} if vae_args.cuda else {}
+
     start_time = time.time()
+    args = vae_args
     model_name = 'model/VAE_%s%s_model-%s.pkl' % (args.model, '' if args.fea_c is None else args.fea_c, args.dataset)
     pic_dir = 'res/VAE_%s%s-%s/' % (args.model, '' if args.fea_c is None else args.fea_c, args.dataset)
     if os.path.exists(model_name) and args.load_model:

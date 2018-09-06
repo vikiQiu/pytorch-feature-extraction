@@ -14,16 +14,7 @@ from utils.utils import check_dir_exists
 from model import SimpleEncoder, SimpleDecoder, VGGEncoder, VGGDecoder
 
 
-################################################################
-# Arguments
-################################################################
-args = train_args()
-cuda = args.cuda and torch.cuda.is_available()
-device = torch.device("cuda" if cuda else "cpu")
-kwargs = {'num_workers': 1, 'pin_memory': True} if args.cuda else {}
-
-
-def init_model(model):
+def init_model(model, args):
     if model == 'conv':
         encoder, decoder = SimpleEncoder(), SimpleDecoder()
     elif 'vgg' in model:
@@ -52,14 +43,24 @@ class AutoEncoder(torch.nn.Module):
 
 
 def train():
+    ################################################################
+    # Arguments
+    ################################################################
+    ae_args = train_args()
+    cuda = ae_args.cuda and torch.cuda.is_available()
+    device = torch.device("cuda" if cuda else "cpu")
+    kwargs = {'num_workers': 1, 'pin_memory': True} if ae_args.cuda else {}
+    # global ae_args, cuda, device, kwargs
+
     start_time = time.time()
+    args = ae_args
     model_name = 'model/AE_%s%s_model-%s.pkl' % (args.model, '' if args.fea_c is None else args.fea_c, args.dataset)
     pic_dir = 'res/AE_%s%s-%s/' % (args.model, '' if args.fea_c is None else args.fea_c, args.dataset)
     if os.path.exists(model_name) and args.load_model:
         print('Loading model ...')
         autoencoder = torch.load(model_name).to(device)
     else:
-        autoencoder = init_model(args.model).to(device)
+        autoencoder = init_model(args.model, args).to(device)
 
     train_loader = getDataLoader(args, kwargs)
     optimizer = torch.optim.Adam(list(autoencoder.parameters()), lr=args.lr)
