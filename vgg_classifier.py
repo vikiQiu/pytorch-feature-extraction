@@ -15,9 +15,9 @@ from utils.utils import check_dir_exists
 from model import VGG16Feature, VGG16Classifier
 
 
-class AEClass(torch.nn.Module):
+class VGGNet(torch.nn.Module):
     def __init__(self, encode_channels=32, num_class=1000):
-        super(AEClass, self).__init__()
+        super(VGGNet, self).__init__()
 
         self.encode_channels = encode_channels
         self.features = VGG16Feature()
@@ -48,7 +48,7 @@ def train():
         vgg = torch.load(model_name).to(device)
     else:
         print('Init model ...')
-        vgg = AEClass(args.fea_c).to(device)
+        vgg = VGGNet(args.fea_c).to(device)
 
     train_loader = getDataLoader(args, kwargs)
     optimizer = torch.optim.Adam(list(vgg.parameters()), lr=args.lr)
