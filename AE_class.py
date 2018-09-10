@@ -12,7 +12,7 @@ from torchvision.utils import save_image
 from data_process import getDataLoader
 from utils.arguments import train_args
 from utils.utils import check_dir_exists
-from model import SimpleEncoder, SimpleDecoder, VGGEncoder, VGGDecoder, VGG16Feature
+from model import SimpleEncoder, SimpleDecoder, VGGEncoder, VGGDecoder, VGG16Feature, VGG16Classifier
 
 
 def init_model(model, args):
@@ -51,13 +51,15 @@ class AEClass(torch.nn.Module):
             nn.Dropout(),
             nn.Linear(1024, num_class)
         )
+        # self.classification = VGG16Classifier()
 
     def forward(self, x):
         fea = self.features(x)
         encode = self.small_features(fea)
         decode = self.decoder(encode)
 
-        c = encode.view(-1, self.encode_channels * 7 * 7)
+        c = encode.view(x.size(0), -1)
+        # c = fea.view(x.size(0), -1)
         c = self.classification(c)
         return encode, decode, c
 
@@ -94,7 +96,7 @@ def train():
     check_dir_exists(['res/', 'model', pic_dir])
     loss_val = None
 
-    total, correct = 0, 0
+    total, correct, top5correct = 0, 0, 0
     for epoch in range(args.epoch):
         step_time = time.time()
         for step, (x, y) in enumerate(train_loader):
@@ -123,15 +125,19 @@ def train():
             _, predicted = torch.max(prob_class.data, 1)
             total += label.size(0)
             correct += (predicted == label).sum().item()
+            top5pre = prob_class.topk(5, 1, True, True)
+            top5pre = top5pre[1].t()
+            top5correct += top5pre.eq(label.view(1, -1).expand_as(top5pre)).sum().item()
 
             loss_val = 0.99*loss_val + 0.01*loss.data[0] if loss_val is not None else loss.data[0]
 
             if step % 10 == 0:
                 torch.save(autoencoder, model_name)
                 print('Epoch:', epoch, 'Step:', step, '|',
-                      'train loss %.6f; Time cost %.2f s; Classification error %.6f; Decoder error %.6f; Accuracy %.2f' %
-                      (loss.data[0], time.time() - step_time, loss2, loss1, correct/total))
-                correct, total = 0, 0
+                      'train loss %.6f; Time cost %.2f s; Classification error %.6f; Decoder error %.6f; '
+                      'Accuracy %.3f%%; Top5 Accuracy %.3f%%' %
+                      (loss.data[0], time.time() - step_time, loss2, loss1, correct*100/total, top5correct*100/total))
+                correct, total, top5correct = 0, 0, 0
                 step_time = time.time()
     print('Finished. Totally cost %.2f' % (time.time() - start_time))
 
