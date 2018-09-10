@@ -116,7 +116,7 @@ def train():
             loss2 = loss_class(prob_class, label) # mean square error
             loss = loss2 + loss1
             optimizer.zero_grad()  # clear gradients for this training step
-            if epoch % 2 == 1:
+            if epoch % 4 != 3:
                 loss1.backward()
             else:
                 loss2.backward()
