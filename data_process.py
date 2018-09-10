@@ -97,15 +97,16 @@ def get_xml_label(dir_path, file_name):
     return pic_name, label
 
 
-def filter_label(not_exists, label_list, img_list, img_dir, Debug=False):
+def filter_label(not_exists, label_list, label_ind, img_list, img_dir, Debug=False):
     for pic in not_exists:
         pic_name = os.path.join(img_dir, pic)
         if pic_name in img_list:
             ind = img_list.index(pic_name)
             img_list.remove(pic_name)
-            label_list.remove(label_list[ind])
+            del label_list[ind]
+            del label_ind[ind]
             if Debug: print('%s is removed.' % pic_name)
-    return img_list, label_list
+    return img_list, label_list, label_ind
 
 
 def get_all_xml_labels(dir_path, img_dir, output_file='labels.csv', Debug=False):
@@ -124,11 +125,14 @@ def get_all_xml_labels(dir_path, img_dir, output_file='labels.csv', Debug=False)
         print(img_list[:10])
         print(label_list[:10])
 
-    all_label = sorted(np.unique(label_list))
-    label_ind = [all_label.index(x) for x in label_list]
+    classes = list(np.unique(label_list))
+    classes.sort()
+    class_to_idx = {classes[i]: i for i in range(len(classes))}
+
+    label_ind = [class_to_idx[x] for x in label_list]
     pd.DataFrame({'img_list': img_list, 'label_list': label_list, 'label_ind': label_ind}).\
         to_csv(os.path.join(dir_path, output_file), index=False)
-    pd.DataFrame({'labels': all_label, 'ind': list(range(len(all_label)))}).\
+    pd.DataFrame({'labels': classes, 'ind': list(range(len(classes)))}).\
         to_csv(os.path.join(dir_path, 'label_ind.csv'), index=False)
     return img_list, label_list, label_ind
 
@@ -149,7 +153,7 @@ def get_imagenet1000_val_labels(dir_path, img_dir, file_name='labels.csv', Debug
         label_list = list(df.label_list)
         label_ind = list(df.label_ind)
 
-    img_list, label_list = filter_label(filter_list, label_list, img_list, img_dir, Debug)
+    img_list, label_list, label_ind = filter_label(filter_list, label_list, label_ind, img_list, img_dir, Debug)
     if Debug:
         print('Totally {} images.'.format(len(img_list)))
         print(img_list[:10])
