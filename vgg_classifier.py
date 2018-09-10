@@ -55,9 +55,8 @@ def train():
     loss_class = nn.CrossEntropyLoss().cuda(cuda)
 
     check_dir_exists(['res/', 'model'])
-    loss_val = None
 
-    total, correct, top5correct = 0, 0, 0
+    total, correct, top5correct, loss_total = 0, 0, 0, 0
     for epoch in range(1):
         step_time = time.time()
         for step, (x, y) in enumerate(train_loader):
@@ -79,14 +78,14 @@ def train():
             top5pre = top5pre[1].t()
             top5correct += top5pre.eq(label.view(1, -1).expand_as(top5pre)).sum().item()
 
-            loss_val = 0.99*loss_val + 0.01*loss.data[0] if loss_val is not None else loss.data[0]
+            loss_total += loss.data[0]*label.size(0)
 
             if step % 10 == 0:
                 torch.save(vgg, model_name)
                 print('Epoch:', epoch, 'Step:', step, '|',
                       'train loss %.6f; Time cost %.2f s; Classification error %.6f; '
                       'Top1 Accuracy %.3f; Top5 Accuracy %.3f' %
-                      (loss.data[0], time.time() - step_time, loss, correct/total, top5correct/total))
+                      (loss_total/total, time.time() - step_time, loss, correct*100/total, top5correct*100/total))
                 step_time = time.time()
     print('Finished. Totally cost %.2f' % (time.time() - start_time))
 
