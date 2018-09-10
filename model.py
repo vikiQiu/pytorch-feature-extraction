@@ -160,8 +160,12 @@ class VGG16Classifier(nn.Module):
         return x
 
     def get_feature(self, x):
-        select_layer = self.vgg[3]
-        return select_layer(x)
+        for name, layer in self.vgg._modules.items():
+            if name <= 3:
+                x = layer(x)
+            else:
+                break
+        return x
 
 
 class VGGDecoder(nn.Module):
