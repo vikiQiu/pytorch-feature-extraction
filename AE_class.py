@@ -89,7 +89,8 @@ def train():
         autoencoder = AEClass(args.fea_c).to(device)
 
     train_loader = getDataLoader(args, kwargs)
-    optimizer = torch.optim.Adam(list(autoencoder.parameters()), lr=args.lr)
+    optimizer1 = torch.optim.Adam(list(autoencoder.parameters()), lr=args.lr)
+    optimizer2 = torch.optim.Adam(list(autoencoder.classification.parameters()), lr=args.lr)
     loss_decoder = nn.MSELoss()
     loss_class = nn.CrossEntropyLoss().cuda(cuda)
 
@@ -115,12 +116,14 @@ def train():
             loss1 = loss_decoder(decoded, b_y)
             loss2 = loss_class(prob_class, label) # mean square error
             loss = loss2 + loss1
-            optimizer.zero_grad()  # clear gradients for this training step
-            if epoch % 4 != 3:
+
+            if epoch % 4 != 0:
+                optimizer1.zero_grad()
                 loss1.backward()
+                optimizer1.step()
             else:
                 loss2.backward()
-            optimizer.step()
+                optimizer2.step()
 
             _, predicted = torch.max(prob_class.data, 1)
             total += label.size(0)
