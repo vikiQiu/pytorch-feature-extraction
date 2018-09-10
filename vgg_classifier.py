@@ -31,6 +31,7 @@ class VGGNet(torch.nn.Module):
 
     def get_feature(self, x):
         fea = self.features(x)
+        fea = fea.view(x.size(0), -1)
         fea = self.classification.get_feature(fea)
         return fea
 
