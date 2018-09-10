@@ -68,9 +68,9 @@ def train():
             prob_class = vgg(b_x)
 
             loss = loss_class(prob_class, label) # mean square error
-            optimizer.zero_grad()  # clear gradients for this training step
-            loss.backward()
-            optimizer.step()
+            # optimizer.zero_grad()  # clear gradients for this training step
+            # loss.backward()
+            # optimizer.step()
 
             _, predicted = torch.max(prob_class.data, 1)
             total += label.size(0)
