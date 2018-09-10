@@ -12,7 +12,7 @@ from torchvision.utils import save_image
 from data_process import getDataLoader
 from utils.arguments import train_args
 from utils.utils import check_dir_exists
-from model import SimpleEncoder, SimpleDecoder, VGGEncoder, VGGDecoder
+from model import SimpleEncoder, SimpleDecoder, VGGEncoder, VGGDecoder, VGG16Feature
 
 
 def init_model(model, args):
@@ -28,21 +28,37 @@ def init_model(model, args):
 
 
 class AEClass(torch.nn.Module):
-    def __init__(self, encoder, decoder):
+    def __init__(self, encode_channels=32, num_class=1000):
         super(AEClass, self).__init__()
 
-        self.encoder = encoder
-        self.decoder = decoder
-        self.fc1 = nn.Linear(encoder.out_channels * 7 * 7, 1024)
-        self.fc2 = nn.Linear(1024, 1000)
+        self.encode_channels = encode_channels
+        self.features = VGG16Feature()
+        self.small_features = nn.Sequential(
+            nn.Conv2d(512, 128, kernel_size=1),
+            nn.BatchNorm2d(128),
+            nn.ReLU(inplace=True),
+            nn.Conv2d(128, encode_channels, kernel_size=1),
+            nn.BatchNorm2d(encode_channels),
+            nn.ReLU(inplace=True)
+        )
+        self.decoder = VGGDecoder(model='vgg16', out_channels=encode_channels)
+        self.classification = nn.Sequential(
+            nn.Linear(encode_channels * 7 * 7, 1024),
+            nn.ReLU(inplace=True),
+            nn.Dropout(),
+            nn.Linear(1024, 1024),
+            nn.ReLU(True),
+            nn.Dropout(),
+            nn.Linear(1024, num_class)
+        )
 
     def forward(self, x):
-        encode = self.encoder(x)
+        fea = self.features(x)
+        encode = self.small_features(fea)
         decode = self.decoder(encode)
 
-        c = encode.view(-1, self.encoder.out_channels * 7 * 7)
-        c = F.relu(self.fc1(c))
-        c = self.fc2(c)
+        c = encode.view(-1, self.encode_channels * 7 * 7)
+        c = self.classification(c)
         return encode, decode, c
 
     def encode(self, x):
@@ -67,12 +83,12 @@ def train():
         print('Loading model ...')
         autoencoder = torch.load(model_name).to(device)
     else:
-        autoencoder = init_model(args.model, args).to(device)
+        autoencoder = AEClass(args.fea_c)
 
     train_loader = getDataLoader(args, kwargs)
     optimizer = torch.optim.Adam(list(autoencoder.parameters()), lr=args.lr)
     loss_decoder = nn.MSELoss()
-    loss_class = nn.CrossEntropyLoss()
+    loss_class = nn.CrossEntropyLoss().cuda(cuda)
 
     check_dir_exists(['res/', 'model', pic_dir])
     loss_val = None

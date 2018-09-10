@@ -1,5 +1,6 @@
 import torch
 import torch.nn as nn
+import torchvision.models as models
 
 
 class SimpleEncoder(nn.Module):
@@ -133,6 +134,18 @@ class VGGEncoder(nn.Module):
         if self.out_channels is not None:
             layers += [nn.Conv2d(512, self.out_channels, kernel_size=1)]
         return nn.Sequential(*layers)
+
+
+class VGG16Feature(nn.Module):
+    def __init__(self):
+        super(VGG16Feature, self).__init__()
+        self.vgg = models.vgg16_bn(pretrained=True).features
+        # for param in self.vgg.parameters():
+        #     param.requires_grad = False
+
+    def forward(self, x):
+        x = self.vgg(x)
+        return x
 
 
 class VGGDecoder(nn.Module):

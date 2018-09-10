@@ -124,8 +124,12 @@ def get_all_xml_labels(dir_path, img_dir, output_file='labels.csv', Debug=False)
         print(img_list[:10])
         print(label_list[:10])
 
-    pd.DataFrame({'img_list': img_list, 'label_list': label_list}).\
+    all_label = sorted(np.unique(label_list))
+    label_ind = [all_label.index(x) for x in label_list]
+    pd.DataFrame({'img_list': img_list, 'label_list': label_list, 'label_ind': label_ind}).\
         to_csv(os.path.join(dir_path, output_file), index=False)
+    pd.DataFrame({'labels': all_label, 'ind': list(range(len(all_label)))}).\
+        to_csv(os.path.join(dir_path, 'label_ind.csv'), index=False)
     return img_list, label_list
 
 
@@ -141,6 +145,7 @@ def get_imagenet1000_val_labels(dir_path, img_dir, file_name='labels.csv', Debug
         df = pd.read_csv(os.path.join(dir_path, file_name))
         img_list = list(df.img_list)
         label_list = list(df.label_list)
+        label_ind = list(df.label_ind)
 
     img_list, label_list = filter_label(filter_list, label_list, img_list, img_dir, Debug)
     if Debug:
@@ -148,7 +153,7 @@ def get_imagenet1000_val_labels(dir_path, img_dir, file_name='labels.csv', Debug
         print(img_list[:10])
         print(label_list[:10])
         print(default_loader(img_list[0]))
-    return img_list, label_list
+    return img_list, label_list, label_ind
 
 
 ################################################################
@@ -161,7 +166,7 @@ class ImageNetDataset(Data.Dataset):
                  label_file='label.csv',
                  img_transform=None,
                  loader=default_loader):
-        self.img_list, self.label_list = get_imagenet1000_val_labels(label_dir, img_dir, label_file)
+        self.img_list, self.label_list, self.label_ind = get_imagenet1000_val_labels(label_dir, img_dir, label_file)
         self.img_transform = img_transform
         self.loader = loader
         self.all_label = list(sorted(np.unique(self.label_list)))
