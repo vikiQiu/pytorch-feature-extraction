@@ -84,7 +84,7 @@ def train():
         autoencoder = torch.load(model_name).to(device)
     else:
         print('Init model ...')
-        autoencoder = AEClass(args.fea_c)
+        autoencoder = AEClass(args.fea_c).to(device)
 
     train_loader = getDataLoader(args, kwargs)
     optimizer = torch.optim.Adam(list(autoencoder.parameters()), lr=args.lr)
@@ -114,7 +114,7 @@ def train():
             loss2 = loss_class(prob_class, label) # mean square error
             loss = loss2 + loss1
             optimizer.zero_grad()  # clear gradients for this training step
-            if epoch % 2 == 0:
+            if epoch // 4 % 2 == 1:
                 loss1.backward()
             else:
                 loss2.backward()
