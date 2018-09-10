@@ -83,14 +83,15 @@ def train():
     pic_dir = 'res/AEClass_%s%s-%s/' % (args.model, '' if args.fea_c is None else args.fea_c, args.dataset)
     if os.path.exists(model_name) and args.load_model:
         print('Loading model ...')
-        autoencoder = torch.load(model_name).to(device)
+        mol = torch.load(model_name).to(device)
     else:
         print('Init model ...')
-        autoencoder = AEClass(args.fea_c).to(device)
+        mol = AEClass(args.fea_c).to(device)
 
     train_loader = getDataLoader(args, kwargs)
-    optimizer1 = torch.optim.Adam(list(autoencoder.parameters()), lr=args.lr)
-    optimizer2 = torch.optim.Adam(list(autoencoder.classification.parameters()), lr=args.lr)
+    optimizer1 = torch.optim.Adam(list(mol.parameters()), lr=args.lr)
+    optimizer2 = torch.optim.Adam(list(mol.classification.parameters())+list(mol.small_features.parameters()),
+                                  lr=args.lr/5)
     loss_decoder = nn.MSELoss()
     loss_class = nn.CrossEntropyLoss().cuda(cuda)
 
@@ -106,7 +107,7 @@ def train():
             label = Variable(torch.Tensor([y[2][i] for i in range(len(y[0]))]).long())
             label = label.cuda() if cuda else label
 
-            encoded, decoded, prob_class = autoencoder(b_x)
+            encoded, decoded, prob_class = mol(b_x)
 
             if step % 100 == 0:
                 img_to_save = decoded.data
@@ -135,7 +136,7 @@ def train():
             loss_val = 0.99*loss_val + 0.01*loss.data[0] if loss_val is not None else loss.data[0]
 
             if step % 10 == 0:
-                torch.save(autoencoder, model_name)
+                torch.save(mol, model_name)
                 print('Epoch:', epoch, 'Step:', step, '|',
                       'train loss %.6f; Time cost %.2f s; Classification error %.6f; Decoder error %.6f; '
                       'Accuracy %.3f%%; Top5 Accuracy %.3f%%' %
@@ -147,5 +148,4 @@ def train():
 
 if __name__ == '__main__':
     train()
-    # model_name = 'AE_%s%s_model-%s' % (args.model, '' if args.fea_c is None else args.fea_c, args.dataset)
-    # evaluate_pic('similar_pic/%s/' % model_name, model_name)
+    pass
