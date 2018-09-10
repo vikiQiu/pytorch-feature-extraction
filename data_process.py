@@ -130,7 +130,7 @@ def get_all_xml_labels(dir_path, img_dir, output_file='labels.csv', Debug=False)
         to_csv(os.path.join(dir_path, output_file), index=False)
     pd.DataFrame({'labels': all_label, 'ind': list(range(len(all_label)))}).\
         to_csv(os.path.join(dir_path, 'label_ind.csv'), index=False)
-    return img_list, label_list
+    return img_list, label_list, label_ind
 
 
 def get_imagenet1000_val_labels(dir_path, img_dir, file_name='labels.csv', Debug=False):
@@ -140,8 +140,10 @@ def get_imagenet1000_val_labels(dir_path, img_dir, file_name='labels.csv', Debug
     '''
     filter_list = ['ILSVRC2012_val_00021280.JPEG']
     if not os.path.exists(os.path.join(dir_path, file_name)):
-        img_list, label_list = get_all_xml_labels(dir_path, img_dir, file_name)
+        print('Creating label file for ImageNet ...')
+        img_list, label_list, label_ind = get_all_xml_labels(dir_path, img_dir, file_name)
     else:
+        print('Loading label file for ImageNet ...')
         df = pd.read_csv(os.path.join(dir_path, file_name))
         img_list = list(df.img_list)
         label_list = list(df.label_list)

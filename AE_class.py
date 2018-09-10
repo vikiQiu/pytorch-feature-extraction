@@ -83,6 +83,7 @@ def train():
         print('Loading model ...')
         autoencoder = torch.load(model_name).to(device)
     else:
+        print('Init model ...')
         autoencoder = AEClass(args.fea_c)
 
     train_loader = getDataLoader(args, kwargs)
