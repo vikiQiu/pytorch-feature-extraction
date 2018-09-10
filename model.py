@@ -159,6 +159,10 @@ class VGG16Classifier(nn.Module):
         x = self.vgg(x)
         return x
 
+    def get_feature(self, x):
+        select_layer = self.vgg[3]
+        return select_layer(x)
+
 
 class VGGDecoder(nn.Module):
     def __init__(self, model='vgg16', out_channels=None,  batch_norm=True):

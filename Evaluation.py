@@ -54,6 +54,10 @@ def generate_feature(output_file):
         elif args.main_model == 'VAE':
             _, mu, std = mol(b_x)
             feature = torch.cat([mu, std])
+        elif args.main_model == 'AEClass':
+            feature, _, _ = mol(b_x)
+        elif args.main_model == 'vgg_classifier':
+            feature = mol.get_feature(b_x)
 
         f = feature.cpu() if cuda else feature
         f = f.data.view(b_x.shape[0], -1).numpy().tolist()
@@ -138,11 +142,12 @@ def evaluate():
     model_name = '%s_%s%s_model-%s' % (args.main_model, args.model, '' if args.fea_c is None else args.fea_c, args.dataset)
     output_file = 'feature/%s.json' % model_name
 
-    if os.path.exists(output_file):
+    if os.path.exists(output_file) and args.load_feature:
         print('Loading features...')
         with open(output_file) as f:
             res = json.load(f)
     else:
+        print('Generating features ...')
         res = generate_feature(output_file)
     similar_mat = cal_distance(normalize_feature(res['features']))
     accuracy, similar_pic = cal_accuracy(similar_mat, res['labels'], model_name)

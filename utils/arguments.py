@@ -46,6 +46,7 @@ def evaluate_args():
     parser.add_argument('--top-k', type=int, default=5)
     parser.add_argument("--feature-channel", type=int, default=None, help="The output channels of encoder.",
                         dest='fea_c')
+    parser.add_argument('--load-feature', action="store_true", default=False)
 
     args = parser.parse_args()
 

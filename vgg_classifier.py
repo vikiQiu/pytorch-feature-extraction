@@ -29,6 +29,11 @@ class VGGNet(torch.nn.Module):
         c = self.classification(c)
         return c
 
+    def get_feature(self, x):
+        fea = self.features(x)
+        fea = self.classification.get_feature(fea)
+        return fea
+
 
 def train():
     ################################################################
