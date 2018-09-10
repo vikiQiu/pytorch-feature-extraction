@@ -148,6 +148,18 @@ class VGG16Feature(nn.Module):
         return x
 
 
+class VGG16Classifier(nn.Module):
+    def __init__(self):
+        super(VGG16Classifier, self).__init__()
+        self.vgg = models.vgg16_bn(pretrained=True).classifier
+        # for param in self.vgg.parameters():
+        #     param.requires_grad = False
+
+    def forward(self, x):
+        x = self.vgg(x)
+        return x
+
+
 class VGGDecoder(nn.Module):
     def __init__(self, model='vgg16', out_channels=None,  batch_norm=True):
         super(VGGDecoder, self).__init__()
