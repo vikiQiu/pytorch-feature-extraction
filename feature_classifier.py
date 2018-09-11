@@ -1,6 +1,7 @@
 import os
 import torch
 import time
+import shutil
 from torch.autograd import Variable
 import torch.nn as nn
 from data_process import getDataLoader
@@ -107,6 +108,7 @@ def train():
             top5correct += top5pre.eq(label.view(1, -1).expand_as(top5pre)).sum().item()
 
             if step % 10 == 0:
+                shutil.copy2(model_name, model_name.split('.pkl')[0]+'_back.pkl')
                 torch.save(mol, model_name)
                 print('Epoch:', epoch, 'Step:', step, '|',
                       'train loss %.6f; Time cost %.2f s; Classification error %.6f'
