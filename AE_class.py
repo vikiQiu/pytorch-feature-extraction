@@ -2,6 +2,7 @@ import os
 import torch
 import time
 import json
+import shutil
 import numpy as np
 import torch.utils.data as Data
 import torch.nn.functional as F
@@ -118,11 +119,13 @@ def train():
             loss2 = loss_class(prob_class, label) # mean square error
             loss = loss2 + loss1
 
-            if epoch % 4 != 0:
+            if False:
+            # if epoch % 4 != 0:
                 optimizer1.zero_grad()
                 loss1.backward()
                 optimizer1.step()
             else:
+                optimizer2.zero_grad()
                 loss2.backward()
                 optimizer2.step()
 
@@ -136,6 +139,7 @@ def train():
             loss_val = 0.99*loss_val + 0.01*loss.data[0] if loss_val is not None else loss.data[0]
 
             if step % 10 == 0:
+                shutil.copy2(model_name, model_name.split('.pkl')[0]+'_back.pkl')                
                 torch.save(mol, model_name)
                 print('Epoch:', epoch, 'Step:', step, '|',
                       'train loss %.6f; Time cost %.2f s; Classification error %.6f; Decoder error %.6f; '
