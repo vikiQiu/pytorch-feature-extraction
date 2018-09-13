@@ -79,6 +79,7 @@ def test(test_loader, mol, cuda, name):
     total, correct, top5correct = 0, 0, 0
     loss_class = nn.CrossEntropyLoss().cuda(cuda)
     step_time = time.time()
+    print('#### Start %s testing with %d batches ####' % (name, len(test_loader)))
 
     for step, (x, y) in enumerate(test_loader):
         # if np.random.randn() > 0.1:
