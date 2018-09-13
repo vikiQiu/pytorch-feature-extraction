@@ -84,7 +84,7 @@ def getDataLoader(args, kwargs, train=True, p=1):
     if train:
         return Data.DataLoader(dataset=dataset, batch_size=args.batch_size, shuffle=True, **kwargs)
     else:
-        return TestDataLoader(dataset=dataset, batch_size=args.batch_size, shuffle=True, p=1, kwargs=kwargs)
+        return TestDataLoader(dataset=dataset, batch_size=args.batch_size, shuffle=True, p=p, kwargs=kwargs)
 
 
 ################################################################
