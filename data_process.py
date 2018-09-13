@@ -44,23 +44,34 @@ loaders = {'default': default_loader}
 # Dataset and Data Loader
 ################################################################
 
-def getDataset(args):
+def getDataset(args, train=True):
     '''
         Now support ['ImageNet1000-val']。
         Add more dataset in future.
-        '''
-    if args.dataset == 'ImageNet1000-val':
-        label_dir = os.path.join(args.dataset_dir, 'ILSVRC2012_bbox_val_v3')
-        img_dir = os.path.join(args.dataset_dir, 'ILSVRC2012_img_val')
+    '''
+    if train:
+        data_dir = args.dataset_dir
+    else:
+        data_dir = args.test_dir
+
+    if 'train_subset' in os.path.basename(data_dir):
+        dataset = ImageNetSubTrainDataset(data_dir, img_num_per_label=200,
+                                          img_transform=transformers['crop' + str(args.img_size)],
+                                          loader=loaders[args.img_loader])
+        return dataset
+    else:
+        label_dir = os.path.join(data_dir, 'ILSVRC2012_bbox_val_v3')
+        img_dir = os.path.join(data_dir, 'ILSVRC2012_img_val')
         dataset = ImageNetDataset(img_dir, label_dir,
                                   img_transform=transformers['crop' + str(args.img_size)],
                                   loader=loaders[args.img_loader])
         return dataset
+
     pass
 
 
-def getDataLoader(args, kwargs):
-    dataset = getDataset(args)
+def getDataLoader(args, kwargs, train=True):
+    dataset = getDataset(args, train)
     return Data.DataLoader(dataset=dataset, batch_size=args.batch_size, shuffle=True, **kwargs)
 
 
@@ -191,13 +202,47 @@ class ImageNetDataset(Data.Dataset):
         return len(self.label_list)
 
 
+class ImageNetSubTrainDataset(Data.Dataset):
+    def __init__(self, img_dir,
+                 img_num_per_label=200,
+                 img_transform=None,
+                 loader=default_loader):
+        self.img_dir = img_dir
+        self.loader = loader
+        self.img_transform = img_transform
+        self.pic_num = 1000*img_num_per_label
+        self.img_num_per_label = img_num_per_label
+        self.labels = sorted(os.listdir(img_dir))
+        self.img_list = {label: sorted([x for x in os.listdir(os.path.join(self.img_dir, label)) if x.endswith('.JPEG')])
+                         for label in self.labels}
+        self.label_num = len(self.labels)
+
+    def __getitem__(self, idx):
+        img_idx = idx % self.img_num_per_label
+        label_idx = idx // self.img_num_per_label
+        label = self.labels[label_idx]
+        img_name = self.img_list[label][img_idx]
+        img = self.loader(os.path.join(self.img_dir, label, img_name))
+
+        if self.img_transform is not None:
+            img = self.img_transform(img)
+        return img, (label, img_name, label_idx)
+
+    def __len__(self):
+        return self.pic_num
+
+
 def testImageNetDataset(img_dir, label_dir, img_transform):
-    dataset = ImageNetDataset(img_dir, label_dir, img_transform=img_transform)
+    # dataset = ImageNetDataset(img_dir, label_dir, img_transform=img_transform)
+    dataset = ImageNetSubTrainDataset('E:\work\\feature generation\data\ILSVRC2012\ILSVRC2012_img_train_subset',
+                                      img_transform=img_transform)
+    data_loader = Data.DataLoader(dataset=dataset, batch_size=64, shuffle=True)
 
     for index, (img, label) in enumerate(dataset):
-        # img.show()
-        print(img.shape)
-        print('label', label)
+        if index % 1000 == 0:
+            # img.show()
+            print(index, img.shape)
+            print('label', label)
 
 
 if __name__ == '__main__':

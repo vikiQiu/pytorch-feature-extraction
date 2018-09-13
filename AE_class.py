@@ -66,6 +66,47 @@ class AEClass(torch.nn.Module):
     def encode(self, x):
         return self.encoder(x)
 
+    def get_prob_class(self, x):
+        fea = self.features(x)
+        encode = self.small_features(fea)
+        c = encode.view(x.size(0), -1)
+        c = self.classification(c)
+        return c
+
+
+def test(test_loader, mol, cuda):
+    total, correct, top5correct = 0, 0, 0
+    loss_class = nn.CrossEntropyLoss().cuda(cuda)
+    step_time = time.time()
+
+    for step, (x, y) in enumerate(test_loader):
+        if np.random.randn() > 0.1:
+            continue
+
+        b_x = Variable(x).cuda() if cuda else Variable(x)
+        label = Variable(torch.Tensor([y[2][i] for i in range(len(y[0]))]).long())
+        label = label.cuda() if cuda else label
+
+        prob_class = mol.get_prob_class(b_x)
+        loss = loss_class(prob_class, label)  # mean square error
+
+        _, predicted = torch.max(prob_class.data, 1)
+        total += label.size(0)
+        correct += (predicted == label).sum().item()
+        top5pre = prob_class.topk(5, 1, True, True)
+        top5pre = top5pre[1].t()
+        top5correct += top5pre.eq(label.view(1, -1).expand_as(top5pre)).sum().item()
+
+        if step % 20 == 0:
+            print('[Testing] Step:', step, '|',
+                  'Classification error %.6f; Accuracy %.3f%%; Top5 Accuracy %.3f%%； Time cost %.2f s' %
+                  (loss, correct * 100 / total, top5correct * 100 / total, time.time() - step_time))
+            step_time = time.time()
+
+    print('[Testing] #### Final Score ####:',
+          'Test size %d; Classification error %.6f; Accuracy %.3f%%; Top5 Accuracy %.3f%%； Time cost %.2f s' %
+          (total, loss, correct * 100 / total, top5correct * 100 / total, time.time() - step_time))
+
 
 def train():
     ################################################################
@@ -88,10 +129,13 @@ def train():
         print('Init model ...')
         mol = AEClass(args.fea_c).to(device)
 
-    train_loader = getDataLoader(args, kwargs)
-    optimizer1 = torch.optim.Adam(list(mol.parameters()), lr=args.lr)
-    optimizer2 = torch.optim.Adam(list(mol.classification.parameters())+list(mol.small_features.parameters()),
-                                  lr=args.lr/5)
+    print('Prepare data loader ...')
+    train_loader = getDataLoader(args, kwargs, train=True)
+    test_loader = getDataLoader(args, kwargs, train=False)
+
+    optimizer2 = torch.optim.Adam(list(mol.features.parameters()), lr=args.lr/5)
+    optimizer1 = torch.optim.Adam(list(mol.classification.parameters())+list(mol.small_features.parameters())+
+                                  list(mol.decoder.parameters()), lr=args.lr)
     loss_decoder = nn.MSELoss()
     loss_class = nn.CrossEntropyLoss().cuda(cuda)
 
@@ -99,7 +143,12 @@ def train():
     loss_val = None
 
     total, correct, top5correct = 0, 0, 0
+    print('Start training ...')
     for epoch in range(args.epoch):
+        # Testing
+        if epoch % 10 == 0:
+            test(test_loader, mol, cuda)
+
         step_time = time.time()
         for step, (x, y) in enumerate(train_loader):
             b_x = Variable(x).cuda() if cuda else Variable(x)
@@ -116,15 +165,21 @@ def train():
 
             loss1 = loss_decoder(decoded, b_y)
             loss2 = loss_class(prob_class, label) # mean square error
-            loss = loss2 + loss1
+            loss = (1-args.alpha) * loss2 + args.alpha * loss1
 
-            if epoch % 4 != 0:
-                optimizer1.zero_grad()
-                loss1.backward()
-                optimizer1.step()
-            else:
-                loss2.backward()
-                optimizer2.step()
+            # if epoch % 4 != 0:
+            #     optimizer1.zero_grad()
+            #     loss1.backward()
+            #     optimizer1.step()
+            # else:
+            #     loss2.backward()
+            #     optimizer2.step()
+
+            optimizer1.zero_grad()
+            # optimizer2.zero_grad()
+            loss.backward()
+            optimizer1.step()
+            # optimizer2.step()
 
             _, predicted = torch.max(prob_class.data, 1)
             total += label.size(0)
@@ -137,12 +192,13 @@ def train():
 
             if step % 10 == 0:
                 torch.save(mol, model_name)
-                print('Epoch:', epoch, 'Step:', step, '|',
+                print('[Training] Epoch:', epoch, 'Step:', step, '|',
                       'train loss %.6f; Time cost %.2f s; Classification error %.6f; Decoder error %.6f; '
                       'Accuracy %.3f%%; Top5 Accuracy %.3f%%' %
                       (loss.data[0], time.time() - step_time, loss2, loss1, correct*100/total, top5correct*100/total))
                 correct, total, top5correct = 0, 0, 0
                 step_time = time.time()
+
     print('Finished. Totally cost %.2f' % (time.time() - start_time))
 
 
