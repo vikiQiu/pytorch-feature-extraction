@@ -75,14 +75,14 @@ class AEClass(torch.nn.Module):
         return c
 
 
-def test(test_loader, mol, cuda):
+def test(test_loader, mol, cuda, name):
     total, correct, top5correct = 0, 0, 0
     loss_class = nn.CrossEntropyLoss().cuda(cuda)
     step_time = time.time()
 
     for step, (x, y) in enumerate(test_loader):
-        if np.random.randn() > 0.1:
-            continue
+        # if np.random.randn() > 0.1:
+        #     continue
 
         b_x = Variable(x).cuda() if cuda else Variable(x)
         label = Variable(torch.Tensor([y[2][i] for i in range(len(y[0]))]).long())
@@ -99,14 +99,13 @@ def test(test_loader, mol, cuda):
         top5correct += top5pre.eq(label.view(1, -1).expand_as(top5pre)).sum().item()
 
         if step % 20 == 0:
-            print('[Testing] Step:', step, '|',
-                  'Classification error %.6f; Accuracy %.3f%%; Top5 Accuracy %.3f%%； Time cost %.2f s' %
-                  (loss, correct * 100 / total, top5correct * 100 / total, time.time() - step_time))
+            print('[%s Testing] Step: %d | '
+                  'Classification error %.6f; Accuracy %.3f%%; Top5 Accuracy %.3f%%; Time cost %.2f s' %
+                  (name, step, loss, correct * 100 / total, top5correct * 100 / total, time.time() - step_time))
             step_time = time.time()
 
-    print('[Testing] #### Final Score ####:',
-          'Test size %d; Classification error %.6f; Accuracy %.3f%%; Top5 Accuracy %.3f%%； Time cost %.2f s' %
-          (total, loss, correct * 100 / total, top5correct * 100 / total, time.time() - step_time))
+    print('[%s Testing] #### Final Score ####: Test size %d; Accuracy %.3f%%; Top5 Accuracy %.3f%%; Time cost %.2f s' %
+          (name, total, correct * 100 / total, top5correct * 100 / total, time.time() - step_time))
 
 
 def train():
@@ -133,6 +132,7 @@ def train():
     print('Prepare data loader ...')
     train_loader = getDataLoader(args, kwargs, train=True)
     test_loader = getDataLoader(args, kwargs, train=False)
+    small_test_loader = getDataLoader(args, kwargs, train=False, p=10)
 
     optimizer2 = torch.optim.Adam(list(mol.features.parameters()), lr=args.lr/5)
     optimizer1 = torch.optim.Adam(list(mol.classification.parameters())+list(mol.small_features.parameters())+
@@ -147,8 +147,10 @@ def train():
     print('Start training ...')
     for epoch in range(args.epoch):
         # Testing
-        if epoch % 10 == 0:
-            test(test_loader, mol, cuda)
+        if epoch % 10 == 9:
+            test(test_loader, mol, cuda, 'Full')
+        else:
+            test(small_test_loader, mol, cuda, 'Small')
 
         step_time = time.time()
         for step, (x, y) in enumerate(train_loader):

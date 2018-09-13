@@ -70,9 +70,21 @@ def getDataset(args, train=True):
     pass
 
 
-def getDataLoader(args, kwargs, train=True):
+class TestDataLoader(Data.DataLoader):
+    def __init__(self, dataset, batch_size, shuffle, p=1, kwargs={}):
+        super().__init__(dataset, batch_size, shuffle, **kwargs)
+        self.p = p
+
+    def __len__(self):
+        return int(len(self.batch_sampler)/self.p)
+
+
+def getDataLoader(args, kwargs, train=True, p=1):
     dataset = getDataset(args, train)
-    return Data.DataLoader(dataset=dataset, batch_size=args.batch_size, shuffle=True, **kwargs)
+    if train:
+        return Data.DataLoader(dataset=dataset, batch_size=args.batch_size, shuffle=True, **kwargs)
+    else:
+        return TestDataLoader(dataset=dataset, batch_size=args.batch_size, shuffle=True, p=1, kwargs=kwargs)
 
 
 ################################################################
@@ -233,10 +245,11 @@ class ImageNetSubTrainDataset(Data.Dataset):
 
 
 def testImageNetDataset(img_dir, label_dir, img_transform):
-    # dataset = ImageNetDataset(img_dir, label_dir, img_transform=img_transform)
-    dataset = ImageNetSubTrainDataset('E:\work\\feature generation\data\ILSVRC2012\ILSVRC2012_img_train_subset',
-                                      img_transform=img_transform)
-    data_loader = Data.DataLoader(dataset=dataset, batch_size=64, shuffle=True)
+    dataset = ImageNetDataset(img_dir, label_dir, img_transform=img_transform)
+    # dataset = ImageNetSubTrainDataset('E:\work\\feature generation\data\ILSVRC2012\ILSVRC2012_img_train_subset',
+    #                                   img_transform=img_transform)
+    data_loader = TestDataLoader(dataset=dataset, batch_size=64, shuffle=True)
+    print(len(data_loader))
 
     for index, (img, label) in enumerate(dataset):
         if index % 1000 == 0:
