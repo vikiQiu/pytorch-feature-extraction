@@ -108,6 +108,7 @@ def test(test_loader, mol, cuda, name):
 
     print('[%s Testing] #### Final Score ####: Test size %d; Accuracy %.3f%%; Top5 Accuracy %.3f%%; Time cost %.2f s' %
           (name, total, correct * 100 / total, top5correct * 100 / total, time.time() - step_time))
+    return correct/total, top5correct/total
 
 
 def train():
@@ -153,11 +154,9 @@ def train():
     print('Start training ...')
     for epoch in range(args.epoch):
         # Testing
-        if epoch % 10 == 9:
-            test(test_loader, mol, cuda, 'Full')
-        else:
-            pass
-            # test(small_test_loader, mol, cuda, 'Small')
+        test_acc, test_top5acc = test(test_loader, mol, cuda, 'Full')
+        writer.add_scalar('test/accuracy', test_acc, epoch)
+        writer.add_scalar('test/top5accuracy', test_top5acc, epoch)
 
         step_time = time.time()
         for step, (x, y) in enumerate(train_loader):
