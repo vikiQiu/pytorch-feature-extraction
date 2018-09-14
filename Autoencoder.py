@@ -86,7 +86,7 @@ def test(test_loader, mol, cuda, name):
     accuracy, _ = cal_accuracy(similar_mat, labels, topk=1)
     top5accuracy, _ = cal_accuracy(similar_mat, labels, topk=5)
     print('[Testing] Feature accuracy = %.5f%%; top5 accuracy = %.5f%%; time cost %.2fs'
-          % (accuracy, top5accuracy, time.time() - test_time))
+          % (np.mean(accuracy), np.mean(top5accuracy), time.time() - test_time))
     return accuracy, top5accuracy, loss
 
 
