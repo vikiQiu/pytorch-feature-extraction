@@ -6,6 +6,7 @@ import shutil
 import numpy as np
 import torch.utils.data as Data
 import torch.nn.functional as F
+from tensorboardX import SummaryWriter
 from torch.autograd import Variable
 # import torchsummary
 import torch.nn as nn
@@ -118,9 +119,13 @@ def train():
     device = torch.device("cuda" if cuda else "cpu")
     kwargs = {'num_workers': 1, 'pin_memory': True} if ae_args.cuda else {}
     # global ae_args, cuda, device, kwargs
+    args = ae_args
+
+    log_dir = 'log/log_AEClass_%s%s_model-%s/' %\
+              (args.model, '' if args.fea_c is None else args.fea_c, args.dataset)
+    writer = SummaryWriter(log_dir)
 
     start_time = time.time()
-    args = ae_args
     model_name = 'model/AEClass_%s%s_model-%s.pkl' % (args.model, '' if args.fea_c is None else args.fea_c, args.dataset)
     pic_dir = 'res/AEClass_%s%s-%s/' % (args.model, '' if args.fea_c is None else args.fea_c, args.dataset)
     if os.path.exists(model_name) and args.load_model:
@@ -141,17 +146,18 @@ def train():
     loss_decoder = nn.MSELoss()
     loss_class = nn.CrossEntropyLoss().cuda(cuda)
 
-    check_dir_exists(['res/', 'model', pic_dir])
+    check_dir_exists(['res/', 'model', pic_dir, log_dir])
     loss_val = None
 
-    total, correct, top5correct = 0, 0, 0
+    total, correct, top5correct, cnt = 0, 0, 0, 0
     print('Start training ...')
     for epoch in range(args.epoch):
         # Testing
         if epoch % 10 == 9:
             test(test_loader, mol, cuda, 'Full')
         else:
-            test(small_test_loader, mol, cuda, 'Small')
+            pass
+            # test(small_test_loader, mol, cuda, 'Small')
 
         step_time = time.time()
         for step, (x, y) in enumerate(train_loader):
@@ -169,8 +175,10 @@ def train():
 
             loss1 = loss_decoder(decoded, b_y)
             loss2 = loss_class(prob_class, label) # mean square error
-
             loss = (1-args.alpha) * loss2 + args.alpha * loss1
+            writer.add_scalar('train/loss_decoder', loss1, cnt)
+            writer.add_scalar('train/loss_classifier', loss2, cnt)
+            writer.add_scalar('train/loss', loss, cnt)
 
             # if epoch % 4 != 0:
             #     optimizer1.zero_grad()
@@ -192,11 +200,14 @@ def train():
             top5pre = prob_class.topk(5, 1, True, True)
             top5pre = top5pre[1].t()
             top5correct += top5pre.eq(label.view(1, -1).expand_as(top5pre)).sum().item()
+            writer.add_scalar('train/accuracy', correct/total, cnt)
+            writer.add_scalar('train/top5_accuracy', top5correct/total, cnt)
 
             loss_val = 0.99*loss_val + 0.01*loss.data[0] if loss_val is not None else loss.data[0]
 
             if step % 10 == 0:
-                shutil.copy2(model_name, model_name.split('.pkl')[0]+'_back.pkl')                
+                if os.path.exists(model_name):
+                    shutil.copy2(model_name, model_name.split('.pkl')[0]+'_back.pkl')
                 torch.save(mol, model_name)
                 print('[Training] Epoch:', epoch, 'Step:', step, '|',
                       'train loss %.6f; Time cost %.2f s; Classification error %.6f; Decoder error %.6f; '
@@ -205,7 +216,11 @@ def train():
                 correct, total, top5correct = 0, 0, 0
                 step_time = time.time()
 
+            cnt += 1
+
     print('Finished. Totally cost %.2f' % (time.time() - start_time))
+    writer.export_scalars_to_json(os.path.join(log_dir, 'all_scalars.json'))
+    writer.close()
 
 
 if __name__ == '__main__':
