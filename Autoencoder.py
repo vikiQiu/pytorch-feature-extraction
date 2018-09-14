@@ -66,7 +66,7 @@ def get_feature_loss(data_loader, mol, cuda):
         labels.extend(label)
 
         feature, decoded = mol(b_x)
-        loss += loss_decoder(decoded, b_y)
+        loss += loss_decoder(decoded, b_y).data[0]
 
         f = feature.cpu() if cuda else feature
         f = f.data.view(b_x.shape[0], -1).numpy().tolist()
@@ -145,7 +145,7 @@ def train():
                 img_to_save = decoded.data
                 save_image(img_to_save, '%s/%s-%s.jpg' % (pic_dir, epoch, step))
 
-            loss = loss_decoder(decoded, b_y).data[0]
+            loss = loss_decoder(decoded, b_y)
             writer.add_scalar('train/loss_decoder', loss, cnt)
 
             optimizer1.zero_grad()
@@ -154,7 +154,7 @@ def train():
             optimizer1.step()
             optimizer2.step()
 
-            if step % 10 == 0:
+            if step % 50 == 0:
                 if os.path.exists(model_name):
                     shutil.copy2(model_name, model_name.split('.pkl')[0]+'_back.pkl')
                 torch.save(mol, model_name)
