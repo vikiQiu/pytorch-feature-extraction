@@ -129,10 +129,10 @@ def train():
     print('Start training ...')
     for epoch in range(args.epoch):
         # Testing
-        # test_acc, test_top5acc, test_loss = test(test_loader, mol, cuda, 'Full')
-        # writer.add_scalar('test/accuracy', test_acc, epoch)
-        # writer.add_scalar('test/top5accuracy', test_top5acc, epoch)
-        # writer.add_scalar('test/loss_decoder', test_loss, epoch)
+        test_acc, test_top5acc, test_loss = test(test_loader, mol, cuda, 'Full')
+        writer.add_scalar('test/accuracy', test_acc, epoch)
+        writer.add_scalar('test/top5accuracy', test_top5acc, epoch)
+        writer.add_scalar('test/loss_decoder', test_loss, epoch)
 
         step_time = time.time()
         for step, (x, y) in enumerate(train_loader):
@@ -145,7 +145,7 @@ def train():
                 img_to_save = decoded.data
                 save_image(img_to_save, '%s/%s-%s.jpg' % (pic_dir, epoch, step))
 
-            loss = loss_decoder(decoded, b_y)
+            loss = loss_decoder(decoded, b_y).data[0]
             writer.add_scalar('train/loss_decoder', loss, cnt)
 
             optimizer1.zero_grad()
