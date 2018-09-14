@@ -1,4 +1,5 @@
 import os
+import json
 import shutil
 import numpy as np
 from PIL import Image
@@ -99,6 +100,53 @@ def check_train_data(pic_num):
             else:
                 shutil.copy(os.path.join(data_dir, label, f), os.path.join(out_dir, label, f))
                 cnt += 1
+
+
+def cal_cos(fea):
+    '''
+    cos matrix
+    :param fea: [[features]]
+    :return:
+    '''
+    print('Calculating cos matrix')
+    feature_mat = np.round(np.array(fea), 8).T
+    d = feature_mat.T @ feature_mat
+    norm = (feature_mat * feature_mat).sum(0, keepdims=True) ** .5
+    similar_mat = d / norm / norm.T
+
+    # fea = np.array(fea)
+    # s = np.sqrt(np.sum(fea**2, 1))
+
+    return similar_mat
+
+
+def cal_distance(X):
+    X = np.array(X).T
+    m,n = X.shape
+    G = np.dot(X.T, X)
+    H = np.tile(np.diag(G), (n, 1))
+    return H + H.T - 2*G
+
+
+def cal_accuracy(similar_mat, labels, model_name=None, topk=5):
+    print('Calculating accuracy')
+    accuracy = []
+    similar_pic = {}
+    similar_pic_dir = 'similar_pic/%s/' % model_name
+    check_dir_exists(['similar_pic/', similar_pic_dir])
+
+    for i, (label, img_name) in enumerate(labels):
+        inds = np.argsort(similar_mat[i])[::-1][1:(topk + 1)]
+        similar_pic[img_name] = [[labels[ind][1], labels[ind][0] == label] for ind in inds]
+        accu = np.mean([labels[ind][0] == label for ind in inds])
+        accuracy.append(accu)
+    print(np.mean(accuracy))
+    out = {'similar_pic': similar_pic, 'accuracy': accuracy}
+
+    if model_name is None:
+        with open(os.path.join(similar_pic_dir, 'similar_res_%s.json' % model_name), 'w') as f:
+            json.dump(out, f)
+    return accuracy, similar_pic
 
 
 if __name__ == '__main__':

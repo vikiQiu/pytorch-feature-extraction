@@ -5,7 +5,7 @@ import numpy as np
 from torch.autograd import Variable
 from data_process import getDataLoader
 from utils.arguments import evaluate_args
-from utils.utils import check_dir_exists
+from utils.utils import check_dir_exists, cal_cos, cal_distance, cal_accuracy
 from Autoencoder import AutoEncoder
 from VAE import VAE
 from vgg_classifier import VGGNet
@@ -73,52 +73,6 @@ def generate_feature(output_file):
     return out
 
 
-def cal_cos(fea):
-    '''
-    cos matrix
-    :param fea: [[features]]
-    :return:
-    '''
-    print('Calculating cos matrix')
-    feature_mat = np.round(np.array(fea), 8).T
-    d = feature_mat.T @ feature_mat
-    norm = (feature_mat * feature_mat).sum(0, keepdims=True) ** .5
-    similar_mat = d / norm / norm.T
-
-    # fea = np.array(fea)
-    # s = np.sqrt(np.sum(fea**2, 1))
-
-    return similar_mat
-
-
-def cal_distance(X):
-    X = np.array(X).T
-    m,n = X.shape
-    G = np.dot(X.T, X)
-    H = np.tile(np.diag(G), (n, 1))
-    return H + H.T - 2*G
-
-
-def cal_accuracy(similar_mat, labels, model_name):
-    print('Calculating accuracy')
-    accuracy = []
-    similar_pic = {}
-    similar_pic_dir = 'similar_pic/%s/' % model_name
-    check_dir_exists(['similar_pic/', similar_pic_dir])
-
-    for i, (label, img_name) in enumerate(labels):
-        inds = np.argsort(similar_mat[i])[::-1][1:(args.top_k + 1)]
-        similar_pic[img_name] = [[labels[ind][1], labels[ind][0] == label] for ind in inds]
-        accu = np.mean([labels[ind][0] == label for ind in inds])
-        accuracy.append(accu)
-    print(np.mean(accuracy))
-    out = {'similar_pic': similar_pic, 'accuracy': accuracy}
-
-    with open(os.path.join(similar_pic_dir, 'similar_res_%s.json' % model_name), 'w') as f:
-        json.dump(out, f)
-    return accuracy, similar_pic
-
-
 def normalize_feature(features):
     features = np.array(features)
     mu = features.mean(0)
@@ -150,7 +104,7 @@ def evaluate():
         print('Generating features ...')
         res = generate_feature(output_file)
     similar_mat = cal_distance(normalize_feature(res['features']))
-    accuracy, similar_pic = cal_accuracy(similar_mat, res['labels'], model_name)
+    accuracy, similar_pic = cal_accuracy(similar_mat, res['labels'], model_name, args.top_k)
 
 
 if __name__ == '__main__':
