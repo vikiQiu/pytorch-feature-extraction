@@ -85,8 +85,8 @@ def test(test_loader, mol, cuda, name):
     similar_mat = cal_cos(feature)
     accuracy, _ = cal_accuracy(similar_mat, labels, topk=1)
     top5accuracy, _ = cal_accuracy(similar_mat, labels, topk=5)
-    print('[Testing] Feature accuracy = %.5f%%; top5 accuracy = %.5f%%; time cost %.2fs'
-          % (np.mean(accuracy), np.mean(top5accuracy), time.time() - test_time))
+    print('[Testing] Feature accuracy = %.5f%%; top5 accuracy = %.5f%%; Decoder loss = %.6f; time cost %.2fs'
+          % (np.mean(accuracy) * 100, np.mean(top5accuracy) * 100, loss, time.time() - test_time))
     return accuracy, top5accuracy, loss
 
 
@@ -130,8 +130,8 @@ def train():
     for epoch in range(args.epoch):
         # Testing
         test_acc, test_top5acc, test_loss = test(test_loader, mol, cuda, 'Full')
-        writer.add_scalar('test/accuracy', test_acc, epoch)
-        writer.add_scalar('test/top5accuracy', test_top5acc, epoch)
+        writer.add_scalar('test/accuracy', np.mean(test_acc), epoch)
+        writer.add_scalar('test/top5accuracy', np.mean(test_top5acc), epoch)
         writer.add_scalar('test/loss_decoder', test_loss, epoch)
 
         step_time = time.time()
