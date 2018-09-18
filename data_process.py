@@ -30,13 +30,24 @@ def fix_size_transform(size):
     return trans
 
 
+def center_fix_size_transform(size):
+    trans = transforms.Compose([
+        transforms.Resize(size),
+        transforms.CenterCrop((size, size)),
+        transforms.ToTensor(), # range [0, 255] -> [0.0,1.0]
+        ]
+    )
+    return trans
+
+
 # transforms.ToTensor()
 default_transformer = transforms.Compose([
     transforms.ToTensor(), # range [0, 255] -> [0.0,1.0]
     ]
 )
 
-transformers = {'default': default_transformer, 'crop224': fix_size_transform(224)}
+transformers = {'default': default_transformer, 'crop224': fix_size_transform(224),
+                'center_crop224': center_fix_size_transform(224)}
 loaders = {'default': default_loader}
 
 
@@ -63,11 +74,11 @@ def getDataset(args, train='train'):
     elif 'cover' in os.path.basename(data_dir):
         if train == 'cover':
             dataset = CoverDataset(os.path.join(data_dir, 'images'),
-                                   img_transform=transformers['crop' + str(args.img_size)],
+                                   img_transform=transformers['center_crop' + str(args.img_size)],
                                    loader=loaders[args.img_loader])
         else:
             dataset = CoverDataset(os.path.join(data_dir, 'samples'),
-                                   img_transform=transformers['crop' + str(args.img_size)],
+                                   img_transform=transformers['center_crop' + str(args.img_size)],
                                    loader=loaders[args.img_loader])
     else:
         label_dir = os.path.join(data_dir, 'ILSVRC2012_bbox_val_v3')
