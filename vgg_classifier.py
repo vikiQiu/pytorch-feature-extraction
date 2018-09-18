@@ -11,7 +11,7 @@ import torch.nn as nn
 from torchvision.utils import save_image
 from data_process import getDataLoader
 from utils.arguments import train_args
-from utils.utils import check_dir_exists
+from utils.utils import check_dir_exists, evaluate_cover
 from model import VGG16Feature, VGG16Classifier
 
 
@@ -29,7 +29,7 @@ class VGGNet(torch.nn.Module):
         c = self.classification(c)
         return c
 
-    def get_feature(self, x):
+    def get_features(self, x):
         fea = self.features(x)
         fea = fea.view(x.size(0), -1)
         fea = self.classification.get_feature(fea)
@@ -49,6 +49,7 @@ def train():
     start_time = time.time()
     args = ae_args
     model_name = 'model/vgg_classifier_%s%s_model-%s.pkl' % (args.model, '' if args.fea_c is None else args.fea_c, args.dataset)
+    evaluation_dir = 'res/evaluation_pic/AEClass_%s%s-%s' % (args.model, '' if args.fea_c is None else args.fea_c, args.dataset)
     if os.path.exists(model_name) and args.load_model:
         print('Loading model ...')
         vgg = torch.load(model_name).to(device)
@@ -57,10 +58,17 @@ def train():
         vgg = VGGNet(args.fea_c).to(device)
 
     train_loader = getDataLoader(args, kwargs)
+    cover_loader = getDataLoader(args, kwargs, train='cover')
+    cover_sample_loader = getDataLoader(args, kwargs, train='cover_sample')
+
     optimizer = torch.optim.Adam(list(vgg.parameters()), lr=args.lr)
     loss_class = nn.CrossEntropyLoss().cuda(cuda)
 
-    check_dir_exists(['res/', 'model'])
+    check_dir_exists(['res/', 'model', 'res/evaluation_pic', evaluation_dir])
+
+    # Evaluation
+    check_dir_exists([os.path.join(evaluation_dir, 'cos'), os.path.join(evaluation_dir, 'distance')])
+    evaluate_cover(cover_loader, cover_sample_loader, vgg, cuda, evaluation_dir)
 
     total, correct, top5correct, loss_total = 0, 0, 0, 0
     for epoch in range(1):

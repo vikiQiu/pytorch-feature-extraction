@@ -13,7 +13,7 @@ import torch.nn as nn
 from torchvision.utils import save_image
 from data_process import getDataLoader
 from utils.arguments import train_args
-from utils.utils import check_dir_exists, generate_features, save_images
+from utils.utils import check_dir_exists, evaluate_cover
 from model import SimpleEncoder, SimpleDecoder, VGGEncoder, VGGDecoder, VGG16Feature, VGG16Classifier
 
 
@@ -112,53 +112,6 @@ def test(test_loader, mol, cuda, name):
     return correct/total, top5correct/total
 
 
-def evaluate_cover(cover_loader, cover_sample_loader, mol, cuda, save_dir, topk=20):
-    print('####### Evaluating ##########')
-
-    sample_features, features = {}, {}
-    print('[Feature] Sample cover feature')
-    fea, labels = generate_features(cover_sample_loader, mol, cuda)
-    sample_features['features'] = np.array(fea)
-    sample_features['labels'] = labels
-
-    print('[Feature] Cover feature')
-    fea, labels = generate_features(cover_loader, mol, cuda)
-    features['features'] = np.array(fea)
-    features['labels'] = labels
-
-    cos_out = {}
-    dist_out = {}
-    for i in range(len(sample_features['features'])):
-        fea_sample = np.array([sample_features['features'][i]])
-        norm = np.dot(fea_sample, fea_sample.T)
-        similarity_cos = []
-        similarity_dist = []
-        for j in range(len(features['features'])):
-            fea = np.array([features['features'][j]])
-            cos = np.dot(fea_sample, fea.T) / np.sqrt(np.dot(fea, fea.T)*norm)
-            similarity_cos.append(cos[0][0])
-            dist = np.mean(np.abs(fea - fea_sample))
-            similarity_dist.append(dist)
-        inds = np.argsort(similarity_cos)[::-1][:topk]
-        labels = [[features['labels'][ind], similarity_cos[ind]] for ind in inds]
-        cos_out[sample_features['labels'][i]] = labels
-        imgs = [sample_features['labels'][i]]
-        imgs.extend([x[0] for x in labels])
-        save_images(imgs, os.path.join(save_dir, 'cos'))
-
-        inds = np.argsort(similarity_dist)[:topk]
-        labels = [[features['labels'][ind], similarity_dist[ind]] for ind in inds]
-        dist_out[sample_features['labels'][i]] = labels
-        imgs = [sample_features['labels'][i]]
-        imgs.extend([x[0] for x in labels])
-        save_images(imgs, os.path.join(save_dir, 'distance'))
-
-        if i % 10 == 0:
-            print('[Similar feature] output similar images.')
-
-    pass
-
-
 def train():
     ################################################################
     # Arguments
@@ -230,7 +183,7 @@ def train():
 
             loss1 = loss_decoder(decoded, b_y)
             loss2 = loss_class(prob_class, label) # mean square error
-            loss = (1-args.alpha) * loss2 + args.alpha * loss1
+            loss = (1-args.alpha) * loss2 + args.alpha * loss1 / 0.001
             writer.add_scalar('train/loss_decoder', loss1, cnt)
             writer.add_scalar('train/loss_classifier', loss2, cnt)
             writer.add_scalar('train/loss', loss, cnt)

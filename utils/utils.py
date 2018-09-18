@@ -125,6 +125,57 @@ def check_train_data(pic_num):
                 cnt += 1
 
 
+def evaluate_cover(cover_loader, cover_sample_loader, mol, cuda, save_dir, topk=20):
+    print('####### Evaluating ##########')
+
+    sample_features, features = {}, {}
+    print('[Feature] Sample cover feature')
+    fea, labels = generate_features(cover_sample_loader, mol, cuda)
+    sample_features['features'] = np.array(fea)
+    sample_features['labels'] = labels
+
+    print('[Feature] Cover feature')
+    fea, labels = generate_features(cover_loader, mol, cuda)
+    features['features'] = np.array(fea)
+    features['labels'] = labels
+
+    cos_out = {}
+    dist_out = {}
+    for i in range(len(sample_features['features'])):
+        fea_sample = np.array([sample_features['features'][i]])
+        norm = np.dot(fea_sample, fea_sample.T)
+        similarity_cos = []
+        similarity_dist = []
+        for j in range(len(features['features'])):
+            fea = np.array([features['features'][j]])
+            cos = np.dot(fea_sample, fea.T) / np.sqrt(np.dot(fea, fea.T) * norm)
+            similarity_cos.append(cos[0][0])
+            dist = np.mean(np.abs(fea - fea_sample))
+            similarity_dist.append(dist)
+        inds = np.argsort(similarity_cos)[::-1][:topk]
+        labels = [[features['labels'][ind], similarity_cos[ind]] for ind in inds]
+        cos_out[sample_features['labels'][i]] = labels
+        imgs = [sample_features['labels'][i]]
+        imgs.extend([x[0] for x in labels])
+        save_images(imgs, os.path.join(save_dir, 'cos'))
+
+        inds = np.argsort(similarity_dist)[:topk]
+        labels = [[features['labels'][ind], similarity_dist[ind]] for ind in inds]
+        dist_out[sample_features['labels'][i]] = labels
+        imgs = [sample_features['labels'][i]]
+        imgs.extend([x[0] for x in labels])
+        save_images(imgs, os.path.join(save_dir, 'distance'))
+
+        if i % 10 == 0:
+            print('[Similar feature] output similar images.')
+
+    out = {'cos': cos_out, 'distance': dist_out}
+    with open(os.path.join(save_dir, 'similar_data.json'), 'w') as f:
+        json.dump(out, f)
+
+    pass
+
+
 def cal_cos(fea):
     '''
     cos matrix
