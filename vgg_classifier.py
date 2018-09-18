@@ -49,7 +49,7 @@ def train():
     start_time = time.time()
     args = ae_args
     model_name = 'model/vgg_classifier_%s%s_model-%s.pkl' % (args.model, '' if args.fea_c is None else args.fea_c, args.dataset)
-    evaluation_dir = 'res/evaluation_pic/AEClass_%s%s-%s' % (args.model, '' if args.fea_c is None else args.fea_c, args.dataset)
+    evaluation_dir = 'res/evaluation_pic/vgg_%s%s-%s' % (args.model, '' if args.fea_c is None else args.fea_c, args.dataset)
     if os.path.exists(model_name) and args.load_model:
         print('Loading model ...')
         vgg = torch.load(model_name).to(device)
