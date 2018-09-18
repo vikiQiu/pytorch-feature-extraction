@@ -133,7 +133,7 @@ def cal_cos(fea):
     '''
     print('Calculating cos matrix')
     feature_mat = np.round(np.array(fea), 8).T
-    d = feature_mat.T @ feature_mat
+    d = np.dot(feature_mat.T, feature_mat)
     norm = (feature_mat * feature_mat).sum(0, keepdims=True) ** .5
     similar_mat = d / norm / norm.T
 
