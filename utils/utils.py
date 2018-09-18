@@ -53,16 +53,18 @@ def prepare_train_data(pic_num):
                 cnt += 1
 
 
-def check_cover_data(data_dir='E:\work\image enhancement\data\cover\images'):
+def check_cover_data(data_dir='E:\work\image enhancement\data\cover0712\images'):
     files = os.listdir(data_dir)
     files = [x for x in files if x.endswith('.jpg')]
     print('Images number is', len(files))
     bad_img = []
-    for f in files:
+    for i, f in enumerate(files):
+        if i % 1000 == 0:
+            print('[Checking] %d finished.' % i)
         try:
-            im = Image.open(os.path.join(data_dir, f))
+            im = Image.open(os.path.join(data_dir, f)).convert('RGB')
         except Exception as e:
-            print('Bad file:', os.path.join(data_dir, f))
+            print('Bad file', i, ':', os.path.join(data_dir, f))
             bad_img.append(f)
     print(bad_img)
     print(im.convert('RGB'))
