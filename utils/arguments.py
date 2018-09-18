@@ -7,6 +7,7 @@ def train_args():
                         help="Dataset to train. Now support ['ImageNet1000-val'].")
     parser.add_argument("--dataset-dir", type=str, default='..\data\ILSVRC2012\\', help="Dataset Directory")
     parser.add_argument("--test-dir", type=str, default='..\data\ILSVRC2012\\', help="Test dataset Directory")
+    parser.add_argument("--cover-dir", type=str, default='..\data\ILSVRC2012\\', help="Cover dataset Directory")
     parser.add_argument("--model", type=str, default='conv',
                         help="Dataset to train. Now support ['conv', 'vgg11', 'vgg13', 'vgg16', 'vgg19']."
                              "'conv' is a simple network with 3 convolution layer."

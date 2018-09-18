@@ -13,7 +13,7 @@ import torch.nn as nn
 from torchvision.utils import save_image
 from data_process import getDataLoader
 from utils.arguments import train_args
-from utils.utils import check_dir_exists
+from utils.utils import check_dir_exists, generate_features, save_images
 from model import SimpleEncoder, SimpleDecoder, VGGEncoder, VGGDecoder, VGG16Feature, VGG16Classifier
 
 
@@ -41,7 +41,6 @@ class AEClass(torch.nn.Module):
             nn.ReLU(inplace=True),
             nn.Conv2d(128, encode_channels, kernel_size=1),
             nn.BatchNorm2d(encode_channels),
-            nn.ReLU(inplace=True)
         )
         self.decoder = VGGDecoder(model='vgg16', out_channels=encode_channels)
         self.classification = nn.Sequential(
@@ -61,12 +60,14 @@ class AEClass(torch.nn.Module):
         decode = self.decoder(encode)
 
         c = encode.view(x.size(0), -1)
-        # c = fea.view(x.size(0), -1)
         c = self.classification(c)
         return encode, decode, c
 
-    def encode(self, x):
-        return self.encoder(x)
+    def get_features(self, x):
+        fea = self.features(x)
+        fea = self.small_features(fea)
+        fea = fea.view(x.size(0), -1)
+        return fea
 
     def get_prob_class(self, x):
         fea = self.features(x)
@@ -111,6 +112,53 @@ def test(test_loader, mol, cuda, name):
     return correct/total, top5correct/total
 
 
+def evaluate_cover(cover_loader, cover_sample_loader, mol, cuda, save_dir, topk=20):
+    print('####### Evaluating ##########')
+
+    sample_features, features = {}, {}
+    print('[Feature] Sample cover feature')
+    fea, labels = generate_features(cover_sample_loader, mol, cuda)
+    sample_features['features'] = np.array(fea)
+    sample_features['labels'] = labels
+
+    print('[Feature] Cover feature')
+    fea, labels = generate_features(cover_loader, mol, cuda)
+    features['features'] = np.array(fea)
+    features['labels'] = labels
+
+    cos_out = {}
+    dist_out = {}
+    for i in range(len(sample_features['features'])):
+        fea_sample = np.array([sample_features['features'][i]])
+        norm = np.dot(fea_sample, fea_sample.T)
+        similarity_cos = []
+        similarity_dist = []
+        for j in range(len(features['features'])):
+            fea = np.array([features['features'][j]])
+            cos = np.dot(fea_sample, fea.T) / np.sqrt(np.dot(fea, fea.T)*norm)
+            similarity_cos.append(cos[0][0])
+            dist = np.mean(np.abs(fea - fea_sample))
+            similarity_dist.append(dist)
+        inds = np.argsort(similarity_cos)[::-1][:topk]
+        labels = [[features['labels'][ind], similarity_cos[ind]] for ind in inds]
+        cos_out[sample_features['labels'][i]] = labels
+        imgs = [sample_features['labels'][i]]
+        imgs.extend([x[0] for x in labels])
+        save_images(imgs, os.path.join(save_dir, 'cos'))
+
+        inds = np.argsort(similarity_dist)[:topk]
+        labels = [[features['labels'][ind], similarity_dist[ind]] for ind in inds]
+        dist_out[sample_features['labels'][i]] = labels
+        imgs = [sample_features['labels'][i]]
+        imgs.extend([x[0] for x in labels])
+        save_images(imgs, os.path.join(save_dir, 'distance'))
+
+        if i % 10 == 0:
+            print('[Similar feature] output similar images.')
+
+    pass
+
+
 def train():
     ################################################################
     # Arguments
@@ -129,6 +177,7 @@ def train():
     start_time = time.time()
     model_name = 'model/AEClass_%s%s_model-%s.pkl' % (args.model, '' if args.fea_c is None else args.fea_c, args.dataset)
     pic_dir = 'res/AEClass_%s%s-%s/' % (args.model, '' if args.fea_c is None else args.fea_c, args.dataset)
+    evaluation_dir = 'res/evaluation_pic/AEClass_%s%s-%s' % (args.model, '' if args.fea_c is None else args.fea_c, args.dataset)
     if os.path.exists(model_name) and args.load_model:
         print('Loading model ...')
         mol = torch.load(model_name).to(device)
@@ -137,9 +186,11 @@ def train():
         mol = AEClass(args.fea_c).to(device)
 
     print('Prepare data loader ...')
-    train_loader = getDataLoader(args, kwargs, train=True)
-    test_loader = getDataLoader(args, kwargs, train=False)
-    small_test_loader = getDataLoader(args, kwargs, train=False, p=10)
+    train_loader = getDataLoader(args, kwargs)
+    test_loader = getDataLoader(args, kwargs, train='test')
+    # small_test_loader = getDataLoader(args, kwargs, train=False, p=10)
+    cover_loader = getDataLoader(args, kwargs, train='cover')
+    cover_sample_loader = getDataLoader(args, kwargs, train='cover_sample')
 
     optimizer2 = torch.optim.Adam(list(mol.features.parameters()), lr=args.lr/5)
     optimizer1 = torch.optim.Adam(list(mol.classification.parameters())+list(mol.small_features.parameters())+
@@ -147,12 +198,17 @@ def train():
     loss_decoder = nn.MSELoss()
     loss_class = nn.CrossEntropyLoss().cuda(cuda)
 
-    check_dir_exists(['res/', 'model', pic_dir, log_dir])
+    check_dir_exists(['res/', 'model', pic_dir, log_dir, 'res/evaluation_pic', evaluation_dir])
     loss_val = None
 
     total, correct, top5correct, cnt = 0, 0, 0, 0
     print('Start training ...')
     for epoch in range(args.epoch):
+        # Evaluation
+        eval_dir = os.path.join(evaluation_dir, 'epoch%d' % epoch)
+        check_dir_exists([eval_dir, os.path.join(eval_dir, 'cos'), os.path.join(eval_dir, 'distance')])
+        evaluate_cover(cover_loader, cover_sample_loader, mol, cuda, eval_dir)
+
         # Testing
         test_acc, test_top5acc = test(test_loader, mol, cuda, 'Full')
         writer.add_scalar('test/accuracy', test_acc, epoch)

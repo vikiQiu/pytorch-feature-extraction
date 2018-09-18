@@ -1,8 +1,12 @@
 import os
 import json
 import shutil
+import torch
+from torch.autograd import Variable
+from torchvision.utils import save_image
 import numpy as np
 from PIL import Image
+import torchvision.transforms as transforms
 
 
 def check_dir_exists(dirs):
@@ -47,6 +51,23 @@ def prepare_train_data(pic_num):
             else:
                 shutil.copy(os.path.join(data_dir, label, f), os.path.join(out_dir, label, f))
                 cnt += 1
+
+
+def check_cover_data(data_dir='E:\work\image enhancement\data\cover\images'):
+    files = os.listdir(data_dir)
+    files = [x for x in files if x.endswith('.jpg')]
+    print('Images number is', len(files))
+    bad_img = []
+    for f in files:
+        try:
+            im = Image.open(os.path.join(data_dir, f))
+        except Exception as e:
+            print('Bad file:', os.path.join(data_dir, f))
+            bad_img.append(f)
+    print(bad_img)
+    print(im.convert('RGB'))
+    for f in bad_img:
+        os.remove(os.path.join(data_dir, f))
 
 
 def check_train_data(pic_num):
@@ -128,7 +149,7 @@ def cal_distance(X):
     return H + H.T - 2*G
 
 
-def cal_accuracy(similar_mat, labels, model_name=None, topk=5):
+def cal_accuracy(similar_mat, labels, model_name=None, topk=5, asscending=False):
     print('Calculating accuracy')
     accuracy = []
     similar_pic = {}
@@ -136,7 +157,10 @@ def cal_accuracy(similar_mat, labels, model_name=None, topk=5):
     check_dir_exists(['similar_pic/', similar_pic_dir])
 
     for i, (label, img_name) in enumerate(labels):
-        inds = np.argsort(similar_mat[i])[::-1][1:(topk + 1)]
+        if asscending:
+            inds = np.argsort(similar_mat[i])[1:(topk + 1)]
+        else:
+            inds = np.argsort(similar_mat[i])[::-1][1:(topk + 1)]
         similar_pic[img_name] = [[labels[ind][1], labels[ind][0] == label] for ind in inds]
         accu = np.mean([labels[ind][0] == label for ind in inds])
         accuracy.append(accu)
@@ -149,6 +173,43 @@ def cal_accuracy(similar_mat, labels, model_name=None, topk=5):
     return accuracy, similar_pic
 
 
-if __name__ == '__main__':
-    prepare_train_data(200)
+def generate_features(data_loader, mol, cuda):
+    features = []
+    labels = []
+    print('Total %d data batches' % len(data_loader))
+    for step, (x, y) in enumerate(data_loader):
+        b_x = Variable(x).cuda() if cuda else Variable(x)
+        label = y
+        feature = mol.get_features(b_x).data
+        feature = feature.cpu().numpy().tolist() if cuda else feature.numpy().tolist()
+        labels.extend(label)
+        features.extend(feature)
 
+        if step % 10 == 0:
+            print('Step %d finished!' % step)
+    return features, labels
+
+
+def center_fix_size_transform(size):
+    trans = transforms.Compose([
+        transforms.Resize(size),
+        transforms.CenterCrop((size, size)),
+        transforms.ToTensor() # range [0, 255] -> [0.0,1.0]
+        ]
+    )
+    return trans
+
+
+def save_images(files, pic_dir):
+    imgs = []
+    for f in files:
+        img = Image.open(f).convert('RGB')
+        img = center_fix_size_transform(224)(img).numpy().tolist()
+        imgs.append(img)
+    imgs = torch.Tensor(imgs)
+    save_image(imgs, '%s/%s' % (pic_dir, os.path.basename(files[0])))
+
+
+if __name__ == '__main__':
+    # prepare_train_data(200)
+    check_cover_data()

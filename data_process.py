@@ -44,30 +44,39 @@ loaders = {'default': default_loader}
 # Dataset and Data Loader
 ################################################################
 
-def getDataset(args, train=True):
+def getDataset(args, train='train'):
     '''
         Now support ['ImageNet1000-val']。
         Add more dataset in future.
     '''
-    if train:
+    if train == 'train':
         data_dir = args.dataset_dir
-    else:
+    elif train == 'test':
         data_dir = args.test_dir
+    elif 'cover' in train:
+        data_dir = args.cover_dir
 
     if 'train_subset' in os.path.basename(data_dir):
         dataset = ImageNetSubTrainDataset(data_dir, img_num_per_label=200,
                                           img_transform=transformers['crop' + str(args.img_size)],
                                           loader=loaders[args.img_loader])
-        return dataset
+    elif 'cover' in os.path.basename(data_dir):
+        if train == 'cover':
+            dataset = CoverDataset(os.path.join(data_dir, 'images'),
+                                   img_transform=transformers['crop' + str(args.img_size)],
+                                   loader=loaders[args.img_loader])
+        else:
+            dataset = CoverDataset(os.path.join(data_dir, 'samples'),
+                                   img_transform=transformers['crop' + str(args.img_size)],
+                                   loader=loaders[args.img_loader])
     else:
         label_dir = os.path.join(data_dir, 'ILSVRC2012_bbox_val_v3')
         img_dir = os.path.join(data_dir, 'ILSVRC2012_img_val')
         dataset = ImageNetDataset(img_dir, label_dir,
                                   img_transform=transformers['crop' + str(args.img_size)],
                                   loader=loaders[args.img_loader])
-        return dataset
 
-    pass
+    return dataset
 
 
 class TestDataLoader(Data.DataLoader):
@@ -79,9 +88,9 @@ class TestDataLoader(Data.DataLoader):
         return int(len(self.batch_sampler)/self.p)
 
 
-def getDataLoader(args, kwargs, train=True, p=1):
+def getDataLoader(args, kwargs, train='train', p=1):
     dataset = getDataset(args, train)
-    if train:
+    if train != 'test':
         return Data.DataLoader(dataset=dataset, batch_size=args.batch_size, shuffle=True, **kwargs)
     else:
         return TestDataLoader(dataset=dataset, batch_size=args.batch_size, shuffle=True, p=p, kwargs=kwargs)
@@ -242,6 +251,27 @@ class ImageNetSubTrainDataset(Data.Dataset):
 
     def __len__(self):
         return self.pic_num
+
+
+class CoverDataset(Data.Dataset):
+    def __init__(self, img_dir,
+                 img_transform=None,
+                 loader=default_loader):
+        self.img_dir = img_dir
+        self.loader = loader
+        self.img_transform = img_transform
+        self.img_list = [x for x in os.listdir(img_dir) if x.endswith('.jpg')]
+
+    def __getitem__(self, idx):
+        img_name = os.path.join(self.img_dir, self.img_list[idx])
+        img = self.loader(os.path.join(self.img_dir, self.img_list[idx]))
+
+        if self.img_transform is not None:
+            img = self.img_transform(img)
+        return img, img_name
+
+    def __len__(self):
+        return len(self.img_list)
 
 
 def testImageNetDataset(img_dir, label_dir, img_transform):
