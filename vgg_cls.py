@@ -109,7 +109,6 @@ def train(mol_short='VGGClass', main_model=VGGClass):
         # Evaluation cover
         if epoch % 5 == 0:
             eval_dir = os.path.join(evaluation_dir, 'epoch%d' % epoch)
-            check_dir_exists([eval_dir, os.path.join(eval_dir, 'cos'), os.path.join(eval_dir, 'distance')])
             evaluate_cover(cover_loader, cover_sample_loader, mol, cuda, eval_dir, feature_name='encode')
             evaluate_cover(cover_loader, cover_sample_loader, mol, cuda, eval_dir, feature_name='fc')
 

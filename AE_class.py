@@ -119,7 +119,6 @@ def train(mol_short='AEClass', main_model=AEClass):
     for epoch in range(args.epoch):
         # Evaluation
         eval_dir = os.path.join(evaluation_dir, 'epoch%d' % epoch)
-        check_dir_exists([eval_dir, os.path.join(eval_dir, 'cos'), os.path.join(eval_dir, 'distance')])
         evaluate_cover(cover_loader, cover_sample_loader, mol, cuda, eval_dir)
 
         # Testing

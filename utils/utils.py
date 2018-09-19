@@ -233,6 +233,7 @@ def evaluate_labeled_data(test_loader, mol, cuda):
 def evaluate_cover_by_features(sample_features, features, save_dir, topk=20, name='encode'):
     cos_out = {}
     dist_out = {}
+    check_dir_exists([save_dir, os.path.join(save_dir, 'cos_%s' % name), os.path.join(save_dir, 'distance_%s' % name)])
     for i in range(len(sample_features['features'])):
         fea_sample = np.array([sample_features['features'][i]])
         norm = np.dot(fea_sample, fea_sample.T)
