@@ -72,6 +72,30 @@ def check_cover_data(data_dir='E:\work\image enhancement\data\cover0712\images')
         os.remove(os.path.join(data_dir, f))
 
 
+def choose_cover_train(data_dir='E:\work\image enhancement\data\cover0712'):
+    files = os.listdir(os.path.join(data_dir, 'images'))
+    files = [x for x in files if x.endswith('.jpg')]
+
+    check_dir_exists([os.path.join(data_dir, 'samples'), os.path.join(data_dir, 'validation')])
+
+    np.random.seed(123)
+    inds = list(range(len(files)))
+    np.random.shuffle(inds)
+    val_inds = inds[200000:234000]
+    sample_inds = inds[234000:]
+    val = [files[i] for i in val_inds]
+    sample = [files[i] for i in sample_inds]
+    print('Validiation number = %d; Sample number = %d' % (len(val), len(sample)))
+
+    print('Move validation images')
+    for f in val:
+        shutil.move(os.path.join(data_dir, 'images', f), os.path.join(data_dir, 'validation', f))
+    print('Move sampled images')
+    for f in sample:
+        shutil.move(os.path.join(data_dir, 'images', f), os.path.join(data_dir, 'samples', f))
+    return
+
+
 def check_train_data(pic_num):
     '''
     Prepare a subset of ILSVRC2012 ImageNet dataset.
@@ -265,4 +289,5 @@ def save_images(files, pic_dir):
 
 if __name__ == '__main__':
     # prepare_train_data(200)
-    check_cover_data()
+    # check_cover_data('E:\work\\feature generation\data\cover\images')
+    choose_cover_train('E:\work\\feature generation\data\cover')

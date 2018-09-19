@@ -9,7 +9,7 @@ from utils.utils import check_dir_exists
 from utils.arguments import feature_classifier_args
 from Autoencoder import AutoEncoder
 from VAE import VAE
-from vgg_classifier import VGGNet
+from vgg_raw import VGGNet
 from AE_class import AEClass
 
 
