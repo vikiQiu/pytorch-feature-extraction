@@ -1,7 +1,9 @@
 import os
 import json
+import time
 import shutil
 import torch
+import torch.nn as nn
 from torch.autograd import Variable
 from torchvision.utils import save_image
 import numpy as np
@@ -149,20 +151,86 @@ def check_train_data(pic_num):
                 cnt += 1
 
 
-def evaluate_cover(cover_loader, cover_sample_loader, mol, cuda, save_dir, topk=20):
-    print('####### Evaluating ##########')
+def test(test_loader, mol, cuda, name):
+    total, correct, top5correct = 0, 0, 0
+    loss_class = nn.CrossEntropyLoss().cuda(cuda)
+    step_time = time.time()
+    print('#### Start %s testing with %d batches ####' % (name, len(test_loader)))
+
+    for step, (x, y) in enumerate(test_loader):
+        # if np.random.randn() > 0.1:
+        #     continue
+
+        b_x = Variable(x).cuda() if cuda else Variable(x)
+        label = Variable(torch.Tensor([y[2][i] for i in range(len(y[0]))]).long())
+        label = label.cuda() if cuda else label
+
+        prob_class = mol.get_prob_class(b_x)
+        loss = loss_class(prob_class, label)  # mean square error
+
+        _, predicted = torch.max(prob_class.data, 1)
+        total += label.size(0)
+        correct += (predicted == label).sum().item()
+        top5pre = prob_class.topk(5, 1, True, True)
+        top5pre = top5pre[1].t()
+        top5correct += top5pre.eq(label.view(1, -1).expand_as(top5pre)).sum().item()
+
+        if step % 20 == 0:
+            print('[%s Testing] Step: %d | '
+                  'Classification error %.6f; Accuracy %.3f%%; Top5 Accuracy %.3f%%; Time cost %.2f s' %
+                  (name, step, loss, correct * 100 / total, top5correct * 100 / total, time.time() - step_time))
+            step_time = time.time()
+
+    print('[%s Testing] #### Final Score ####: Test size %d; Accuracy %.3f%%; Top5 Accuracy %.3f%%; Time cost %.2f s' %
+          (name, total, correct * 100 / total, top5correct * 100 / total, time.time() - step_time))
+    return correct/total, top5correct/total
+
+
+def evaluate_cover(cover_loader, cover_sample_loader, mol, cuda, save_dir, topk=23, feature_name='encode'):
+    print('####### Evaluating Cover Data (%s) ##########' % feature_name)
 
     sample_features, features = {}, {}
-    print('[Feature] Sample cover feature')
+    print('[%s Feature] Sample cover feature' % feature_name)
     fea, labels = generate_features(cover_sample_loader, mol, cuda)
     sample_features['features'] = np.array(fea)
     sample_features['labels'] = labels
 
-    print('[Feature] Cover feature')
+    print('[%s Feature] Cover feature' % feature_name)
     fea, labels = generate_features(cover_loader, mol, cuda)
     features['features'] = np.array(fea)
     features['labels'] = labels
 
+    evaluate_cover_by_features(sample_features, features, save_dir, topk, feature_name)
+
+    pass
+
+
+def evaluate_labeled_data(test_loader, mol, cuda):
+    print('####### Evaluating Labeld Data ##########')
+
+    test_time = time.time()
+    print('[Encode Feature] ImageNet validation feature')
+    feature, labels = generate_features(test_loader, mol, cuda)
+    labels = [x[0] for x in labels]
+    similar_mat = cal_cos(feature)
+    encode_accuracy, _ = cal_accuracy(similar_mat, labels, topk=1)
+    encode_top5accuracy, _ = cal_accuracy(similar_mat, labels, topk=5)
+    print('[Encode Testing] Feature accuracy = %.5f%%; top5 accuracy = %.5f%%; time cost %.2fs'
+          % (np.mean(encode_accuracy) * 100, np.mean(encode_top5accuracy) * 100, time.time() - test_time))
+
+    test_time = time.time()
+    print('[FC Feature] ImageNet validation feature')
+    feature, labels = generate_features(test_loader, mol, cuda)
+    labels = [x[0] for x in labels]
+    similar_mat = cal_cos(feature)
+    fc_accuracy, _ = cal_accuracy(similar_mat, labels, topk=1)
+    fc_top5accuracy, _ = cal_accuracy(similar_mat, labels, topk=5)
+    print('[FC Testing] Feature accuracy = %.5f%%; top5 accuracy = %.5f%%; time cost %.2fs'
+          % (np.mean(fc_accuracy) * 100, np.mean(fc_top5accuracy) * 100, time.time() - test_time))
+    return encode_accuracy, encode_top5accuracy, fc_accuracy, fc_top5accuracy
+
+
+def evaluate_cover_by_features(sample_features, features, save_dir, topk=20, name='encode'):
     cos_out = {}
     dist_out = {}
     for i in range(len(sample_features['features'])):
@@ -181,14 +249,14 @@ def evaluate_cover(cover_loader, cover_sample_loader, mol, cuda, save_dir, topk=
         cos_out[sample_features['labels'][i]] = labels
         imgs = [sample_features['labels'][i]]
         imgs.extend([x[0] for x in labels])
-        save_images(imgs, os.path.join(save_dir, 'cos'))
+        save_images(imgs, os.path.join(save_dir, 'cos_%s' % name))
 
         inds = np.argsort(similarity_dist)[:topk]
         labels = [[features['labels'][ind], similarity_dist[ind]] for ind in inds]
         dist_out[sample_features['labels'][i]] = labels
         imgs = [sample_features['labels'][i]]
         imgs.extend([x[0] for x in labels])
-        save_images(imgs, os.path.join(save_dir, 'distance'))
+        save_images(imgs, os.path.join(save_dir, 'distance_%s' % name))
 
         if i % 10 == 0:
             print('[Similar feature] output similar images.')
@@ -196,8 +264,6 @@ def evaluate_cover(cover_loader, cover_sample_loader, mol, cuda, save_dir, topk=
     out = {'cos': cos_out, 'distance': dist_out}
     with open(os.path.join(save_dir, 'similar_data.json'), 'w') as f:
         json.dump(out, f)
-
-    pass
 
 
 def cal_cos(fea):
@@ -250,14 +316,20 @@ def cal_accuracy(similar_mat, labels, model_name=None, topk=5, asscending=False)
     return accuracy, similar_pic
 
 
-def generate_features(data_loader, mol, cuda):
+def generate_features(data_loader, mol, cuda, name='encode'):
     features = []
     labels = []
     print('Total %d data batches' % len(data_loader))
     for step, (x, y) in enumerate(data_loader):
         b_x = Variable(x).cuda() if cuda else Variable(x)
         label = y
-        feature = mol.get_features(b_x).data
+        if name == 'encode':
+            feature = mol.get_encode_features(b_x).data
+        elif name == 'fc':
+            feature = mol.get_fc_features(b_x).data
+        else:
+            print('only encode and fc layer features are supported. Use encode feature instead!')
+            feature = mol.get_encode_features(b_x).data
         feature = feature.cpu().numpy().tolist() if cuda else feature.numpy().tolist()
         labels.extend(label)
         features.extend(feature)

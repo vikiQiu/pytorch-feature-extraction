@@ -57,7 +57,7 @@ def generate_feature(output_file):
         elif args.main_model == 'AEClass':
             feature, _, _ = mol(b_x)
         elif args.main_model == 'vgg_classifier':
-            feature = mol.get_features(b_x)
+            feature = mol.get_encode_features(b_x)
 
         f = feature.cpu() if cuda else feature
         f = f.data.view(b_x.shape[0], -1).numpy().tolist()

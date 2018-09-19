@@ -8,18 +8,17 @@ import torch.utils.data as Data
 import torch.nn.functional as F
 from tensorboardX import SummaryWriter
 from torch.autograd import Variable
-# import torchsummary
 import torch.nn as nn
 from torchvision.utils import save_image
 from data_process import getDataLoader
 from utils.arguments import train_args
-from utils.utils import check_dir_exists, evaluate_cover, test
-from model import VGGDecoder, VGG16Feature
+from utils.utils import check_dir_exists, evaluate_cover, test, evaluate_labeled_data
+from model import VGG16Feature
 
 
-class AEClass(torch.nn.Module):
+class VGGClass(torch.nn.Module):
     def __init__(self, encode_channels=32, num_class=1000):
-        super(AEClass, self).__init__()
+        super(VGGClass, self).__init__()
 
         self.encode_channels = encode_channels
         self.features = VGG16Feature()
@@ -30,7 +29,6 @@ class AEClass(torch.nn.Module):
             nn.Conv2d(128, encode_channels, kernel_size=1),
             nn.BatchNorm2d(encode_channels),
         )
-        self.decoder = VGGDecoder(model='vgg16', out_channels=encode_channels)
         self.classification = nn.Sequential(
             nn.Linear(encode_channels * 7 * 7, 1024),
             nn.ReLU(inplace=True),
@@ -40,29 +38,17 @@ class AEClass(torch.nn.Module):
             nn.Dropout(),
             nn.Linear(1024, num_class)
         )
-        # self.classification = VGG16Classifier()
 
     def forward(self, x):
-        fea = self.features(x)
-        encode = self.small_features(fea)
-        decode = self.decoder(encode)
-
-        c = encode.view(x.size(0), -1)
-        c = self.classification(c)
-        return encode, decode, c
+        fea = self.get_encode_features(x)
+        c = self.classification(fea)
+        return c
 
     def get_encode_features(self, x):
         fea = self.features(x)
         fea = self.small_features(fea)
         fea = fea.view(x.size(0), -1)
         return fea
-
-    def get_prob_class(self, x):
-        fea = self.feeatures(x)
-        encode = self.small_features(fea)
-        c = encode.view(x.size(0), -1)
-        c = self.classification(c)
-        return c
 
     def get_fc_features(self, x):
         fea = self.get_encode_features(x)
@@ -71,8 +57,11 @@ class AEClass(torch.nn.Module):
                 fea = layer(fea)
         return fea
 
+    def get_prob_class(self, x):
+        return self.forward(x)
 
-def train(mol_short='AEClass', main_model=AEClass):
+
+def train(mol_short='VGGClass', main_model=VGGClass):
     ################################################################
     # Arguments
     ################################################################
@@ -105,27 +94,34 @@ def train(mol_short='AEClass', main_model=AEClass):
     cover_loader = getDataLoader(args, kwargs, train='cover')
     cover_sample_loader = getDataLoader(args, kwargs, train='cover_sample')
 
-    optimizer2 = torch.optim.Adam(list(mol.features.parameters()), lr=args.lr/5)
-    optimizer1 = torch.optim.Adam(list(mol.classification.parameters())+list(mol.small_features.parameters())+
-                                  list(mol.decoder.parameters()), lr=args.lr)
-    loss_decoder = nn.MSELoss()
+    # Optimizer & Loss function
+    optimizer1 = torch.optim.Adam(list(mol.classification.parameters())+list(mol.small_features.parameters()),
+                                  lr=args.lr)
     loss_class = nn.CrossEntropyLoss().cuda(cuda)
-
-    check_dir_exists(['res/', 'model', pic_dir, log_dir, 'res/evaluation_pic', evaluation_dir])
     loss_val = None
+
+    # Check directories
+    check_dir_exists(['res/', 'model', pic_dir, log_dir, 'res/evaluation_pic', evaluation_dir])
 
     total, correct, top5correct, cnt = 0, 0, 0, 0
     print('Start training ...')
     for epoch in range(args.epoch):
-        # Evaluation
-        eval_dir = os.path.join(evaluation_dir, 'epoch%d' % epoch)
-        check_dir_exists([eval_dir, os.path.join(eval_dir, 'cos'), os.path.join(eval_dir, 'distance')])
-        evaluate_cover(cover_loader, cover_sample_loader, mol, cuda, eval_dir)
+        # Evaluation cover
+        if epoch % 5 == 0:
+            eval_dir = os.path.join(evaluation_dir, 'epoch%d' % epoch)
+            check_dir_exists([eval_dir, os.path.join(eval_dir, 'cos'), os.path.join(eval_dir, 'distance')])
+            evaluate_cover(cover_loader, cover_sample_loader, mol, cuda, eval_dir, feature_name='encode')
+            evaluate_cover(cover_loader, cover_sample_loader, mol, cuda, eval_dir, feature_name='fc')
 
-        # Testing
+        # Testing classifier
         test_acc, test_top5acc = test(test_loader, mol, cuda, 'Full')
-        writer.add_scalar('test/accuracy', test_acc, epoch)
-        writer.add_scalar('test/top5accuracy', test_top5acc, epoch)
+        writer.add_scalar('test/class_accuracy', test_acc, epoch)
+        writer.add_scalar('test/class_top5accuracy', test_top5acc, epoch)
+        encode_accuracy, encode_top5accuracy, fc_accuracy, fc_top5accuracy = evaluate_labeled_data(test_loader, mol, cuda)
+        writer.add_scalar('test/encode_feature_accuracy', np.mean(encode_accuracy), epoch)
+        writer.add_scalar('test/encode_feature_top5accuracy', np.mean(encode_top5accuracy), epoch)
+        writer.add_scalar('test/fc_feature_accuracy', np.mean(fc_accuracy), epoch)
+        writer.add_scalar('test/fc_feature_top5accuracy', np.mean(fc_top5accuracy), epoch)
 
         step_time = time.time()
         for step, (x, y) in enumerate(train_loader):
@@ -139,20 +135,13 @@ def train(mol_short='AEClass', main_model=AEClass):
             if step % 100 == 0:
                 img_to_save = decoded.data
                 save_image(img_to_save, '%s/%s-%s.jpg' % (pic_dir, epoch, step))
-            # io.imsave('.xxx.jpg',img_to_save[0])
 
-            loss1 = loss_decoder(decoded, b_y)
-            loss2 = loss_class(prob_class, label) # mean square error
-            loss = (1-args.alpha) * loss2 + args.alpha * loss1 / 0.001
-            writer.add_scalar('train/loss_decoder', loss1, cnt)
-            writer.add_scalar('train/loss_classifier', loss2, cnt)
-            writer.add_scalar('train/loss', loss, cnt)
+            loss = loss_class(decoded, b_y)
+            writer.add_scalar('train/loss_classifier', loss, cnt)
 
             optimizer1.zero_grad()
-            # optimizer2.zero_grad()
             loss.backward()
             optimizer1.step()
-            # optimizer2.step()
 
             _, predicted = torch.max(prob_class.data, 1)
             total += label.size(0)
@@ -170,9 +159,8 @@ def train(mol_short='AEClass', main_model=AEClass):
                     shutil.copy2(model_name, model_name.split('.pkl')[0]+'_back.pkl')
                 torch.save(mol, model_name)
                 print('[Training] Epoch:', epoch, 'Step:', step, '|',
-                      'train loss %.6f; Time cost %.2f s; Classification error %.6f; Decoder error %.6f; '
-                      'Accuracy %.3f%%; Top5 Accuracy %.3f%%' %
-                      (loss.data[0], time.time() - step_time, loss2, loss1, correct*100/total, top5correct*100/total))
+                      'train loss %.6f; Time cost %.2f s; Accuracy %.3f%%; Top5 Accuracy %.3f%%' %
+                      (loss.data[0], time.time() - step_time, correct*100/total, top5correct*100/total))
                 correct, total, top5correct = 0, 0, 0
                 step_time = time.time()
 

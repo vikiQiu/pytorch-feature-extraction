@@ -76,6 +76,10 @@ def getDataset(args, train='train'):
             dataset = CoverDataset(os.path.join(data_dir, 'images'),
                                    img_transform=transformers['center_crop' + str(args.img_size)],
                                    loader=loaders[args.img_loader])
+        elif train == 'cover_validation':
+            dataset = CoverDataset(os.path.join(data_dir, 'validation'),
+                                   img_transform=transformers['center_crop' + str(args.img_size)],
+                                   loader=loaders[args.img_loader])
         else:
             dataset = CoverDataset(os.path.join(data_dir, 'samples'),
                                    img_transform=transformers['center_crop' + str(args.img_size)],
