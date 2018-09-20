@@ -78,17 +78,18 @@ class AEClass(torch.nn.Module):
 
 
 def test_decoder(test_loader, mol, cuda, name):
-    # TODO:
     loss_decoder_fn = nn.MSELoss()
     step_time = time.time()
     print('#### Start %s testing with %d batches ####' % (name, len(test_loader)))
 
+    decoders = []
     for step, (x, y) in enumerate(test_loader):
-        b_x = Variable(x).cuda() if cuda else Variable(x)
+        b_x = Variable(x, volatile=True).cuda() if cuda else Variable(x)
         b_y = b_x.detach().cuda() if cuda else b_x.detach()
 
         _, decoded, prob_class = mol(b_x)
-        loss_decoder = loss_decoder_fn(decoded, b_y)
+        loss_decoder = loss_decoder_fn(decoded, b_y).data[0]
+        decoders.append(loss_decoder)
 
         if step % 20 == 0:
             print('[%s Testing] Step: %d | Decoder error %.6f; Time cost %.2f s' %
@@ -96,10 +97,10 @@ def test_decoder(test_loader, mol, cuda, name):
             step_time = time.time()
 
     print('[%s Testing] #### Final Score ####: Decoder error %.6f; Time cost %.2f s' %
-          (name, loss_decoder, time.time() - step_time))
+          (name, np.mean(decoders), time.time() - step_time))
 
     del b_x, b_y, prob_class, decoded
-    return loss_decoder
+    return np.mean(decoders)
 
 
 def test_cls_decoder(test_loader, mol, cuda, name):
