@@ -13,7 +13,7 @@ import torch.nn as nn
 from torchvision.utils import save_image
 from data_process import getDataLoader
 from utils.arguments import train_args
-from utils.utils import check_dir_exists, evaluate_cover, test
+from utils.utils import check_dir_exists, evaluate_cover
 from model import VGGDecoder, VGG16Feature
 
 
@@ -64,12 +64,49 @@ class AEClass(torch.nn.Module):
         c = self.classification(c)
         return c
 
-    def get_fc_features(self, x):
+    def get_fc_features(self, x, return_both=False):
         fea = self.get_encode_features(x)
+        c = fea
         for name, layer in self.classification._modules.items():
-            if name <= 3:
-                fea = layer(fea)
-        return fea
+            if int(name) <= 3:
+                c = layer(c)
+        if return_both:
+            return fea, c
+        else:
+            return fea
+
+
+def test_cls_decoder(test_loader, mol, cuda, name):
+    # TODO:
+    total, correct, top5correct = 0, 0, 0
+    loss_class = nn.CrossEntropyLoss().cuda(cuda)
+    step_time = time.time()
+    print('#### Start %s testing with %d batches ####' % (name, len(test_loader)))
+
+    for step, (x, y) in enumerate(test_loader):
+        b_x = Variable(x).cuda() if cuda else Variable(x)
+        label = Variable(torch.Tensor([y[2][i] for i in range(len(y[0]))]).long())
+        label = label.cuda() if cuda else label
+
+        prob_class = mol.get_prob_class(b_x)
+        loss = loss_class(prob_class, label)  # mean square error
+
+        _, predicted = torch.max(prob_class.data, 1)
+        total += label.size(0)
+        correct += (predicted == label).sum().item()
+        top5pre = prob_class.topk(5, 1, True, True)
+        top5pre = top5pre[1].t()
+        top5correct += top5pre.eq(label.view(1, -1).expand_as(top5pre)).sum().item()
+
+        if step % 20 == 0:
+            print('[%s Testing] Step: %d | '
+                  'Classification error %.6f; Accuracy %.3f%%; Top5 Accuracy %.3f%%; Time cost %.2f s' %
+                  (name, step, loss, correct * 100 / total, top5correct * 100 / total, time.time() - step_time))
+            step_time = time.time()
+
+    print('[%s Testing] #### Final Score ####: Test size %d; Accuracy %.3f%%; Top5 Accuracy %.3f%%; Time cost %.2f s' %
+          (name, total, correct * 100 / total, top5correct * 100 / total, time.time() - step_time))
+    return correct/total, top5correct/total
 
 
 def train(mol_short='AEClass', main_model=AEClass):

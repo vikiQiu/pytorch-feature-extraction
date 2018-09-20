@@ -50,12 +50,16 @@ class VGGClass(torch.nn.Module):
         fea = fea.view(x.size(0), -1)
         return fea
 
-    def get_fc_features(self, x):
+    def get_fc_features(self, x, return_both=False):
         fea = self.get_encode_features(x)
+        c = fea
         for name, layer in self.classification._modules.items():
             if int(name) <= 3:
-                fea = layer(fea)
-        return fea
+                c = layer(c)
+        if return_both:
+            return fea, c
+        else:
+            return fea
 
     def get_prob_class(self, x):
         return self.forward(x)

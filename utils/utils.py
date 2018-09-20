@@ -327,11 +327,10 @@ def generate_features(data_loader, mol, cuda):
     print('Total %d data batches' % len(data_loader))
     for step, (x, y) in enumerate(data_loader):
         b_x = Variable(x).cuda() if cuda else Variable(x)
-        label = y
-        encode_feature = mol.get_encode_features(b_x).data
-        fc_feature = mol.get_fc_features(b_x).data
-        encode_feature = encode_feature.cpu().numpy().tolist() if cuda else encode_feature.numpy().tolist()
-        fc_feature = fc_feature.cpu().numpy().tolist() if cuda else fc_feature.numpy().tolist()
+        label = [(y[0][i], y[1][i]) for i in range(len(y[0]))]
+        encode_feature, fc_feature = mol.get_fc_features(b_x, return_both=True)
+        encode_feature = encode_feature.data.cpu().numpy().tolist() if cuda else encode_feature.data.numpy().tolist()
+        fc_feature = fc_feature.data.cpu().numpy().tolist() if cuda else fc_feature.data.numpy().tolist()
         labels.extend(label)
         encode_features.extend(encode_feature)
         fc_features.extend(fc_feature)
