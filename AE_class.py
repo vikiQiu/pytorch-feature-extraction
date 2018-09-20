@@ -194,6 +194,9 @@ def train_decoder_only(mol_short='AEClass_d', main_model=AEClass):
         # writer.add_scalar('test_cover/accuracy', test_acc, epoch)
         # writer.add_scalar('test_cover/top5accuracy', test_top5acc, epoch)
 
+        print('Sleeping...')
+        time.sleep(10)
+
         # Testing on ImageNet val
         print('######### Testing on ImageNet val Dataset ###########')
         # test_loss_decoder, test_loss_cls, test_acc, test_top5acc = test_cls_decoder(test_loader, mol, cuda, 'Full')
