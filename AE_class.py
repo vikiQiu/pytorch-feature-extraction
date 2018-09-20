@@ -99,6 +99,7 @@ def test_decoder(test_loader, mol, cuda, name):
           (name, loss_decoder, time.time() - step_time))
 
     del b_x, b_y, prob_class, decoded
+    gc.collect()
     return loss_decoder
 
 
@@ -198,8 +199,8 @@ def train_decoder_only(mol_short='AEClass_d', main_model=AEClass):
         # writer.add_scalar('test_cover/top5accuracy', test_top5acc, epoch)
 
         print('Sleeping...')
-        gc.collect()
-        time.sleep(10)
+        # gc.collect()
+        time.sleep(60)
 
         # Testing on ImageNet val
         print('######### Testing on ImageNet val Dataset ###########')
