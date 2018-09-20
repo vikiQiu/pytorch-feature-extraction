@@ -115,12 +115,13 @@ def train(mol_short='VGGClass', main_model=VGGClass):
             eval_dir = os.path.join(evaluation_dir, 'epoch%d' % epoch)
             evaluate_cover(cover_loader, cover_sample_loader, mol, cuda, eval_dir)
 
+            encode_accuracy, encode_top5accuracy, fc_accuracy, fc_top5accuracy = evaluate_labeled_data(test_loader, mol, cuda)
+            writer.add_scalar('test/encode_feature_accuracy', np.mean(encode_accuracy), epoch)
+            writer.add_scalar('test/encode_feature_top5accuracy', np.mean(encode_top5accuracy), epoch)
+            writer.add_scalar('test/fc_feature_accuracy', np.mean(fc_accuracy), epoch)
+            writer.add_scalar('test/fc_feature_top5accuracy', np.mean(fc_top5accuracy), epoch)
+
         # Testing classifier
-        encode_accuracy, encode_top5accuracy, fc_accuracy, fc_top5accuracy = evaluate_labeled_data(test_loader, mol, cuda)
-        writer.add_scalar('test/encode_feature_accuracy', np.mean(encode_accuracy), epoch)
-        writer.add_scalar('test/encode_feature_top5accuracy', np.mean(encode_top5accuracy), epoch)
-        writer.add_scalar('test/fc_feature_accuracy', np.mean(fc_accuracy), epoch)
-        writer.add_scalar('test/fc_feature_top5accuracy', np.mean(fc_top5accuracy), epoch)
         test_acc, test_top5acc = test(test_loader, mol, cuda, 'Full')
         writer.add_scalar('test/class_accuracy', test_acc, epoch)
         writer.add_scalar('test/class_top5accuracy', test_top5acc, epoch)
@@ -128,17 +129,12 @@ def train(mol_short='VGGClass', main_model=VGGClass):
         step_time = time.time()
         for step, (x, y) in enumerate(train_loader):
             b_x = Variable(x).cuda() if cuda else Variable(x)
-            b_y = b_x.detach().cuda() if cuda else b_x.detach()  # batch y, shape (batch, 32*32*3)
             label = Variable(torch.Tensor([y[2][i] for i in range(len(y[0]))]).long())
             label = label.cuda() if cuda else label
 
-            encoded, decoded, prob_class = mol(b_x)
+            prob_class = mol(b_x)
 
-            if step % 100 == 0:
-                img_to_save = decoded.data
-                save_image(img_to_save, '%s/%s-%s.jpg' % (pic_dir, epoch, step))
-
-            loss = loss_class(decoded, b_y)
+            loss = loss_class(prob_class, label)
             writer.add_scalar('train/loss_classifier', loss, cnt)
 
             optimizer1.zero_grad()
