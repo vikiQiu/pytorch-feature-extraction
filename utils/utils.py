@@ -186,21 +186,21 @@ def test(test_loader, mol, cuda, name):
     return correct/total, top5correct/total
 
 
-def evaluate_cover(cover_loader, cover_sample_loader, mol, cuda, save_dir, topk=23, feature_name='encode'):
-    print('####### Evaluating Cover Data (%s) ##########' % feature_name)
+def evaluate_cover(cover_loader, cover_sample_loader, mol, cuda, save_dir, topk=23):
+    print('####### Evaluating Cover Data (Choose top%d similar images in the samples) ##########' % topk)
 
-    sample_features, features = {}, {}
-    print('[%s Feature] Sample cover feature' % feature_name)
-    fea, labels = generate_features(cover_sample_loader, mol, cuda)
-    sample_features['features'] = np.array(fea)
-    sample_features['labels'] = labels
+    print('[Feature] Generating Encode and fc Sample cover feature')
+    encode_fea, fc_fea, labels = generate_features(cover_sample_loader, mol, cuda)
+    sample_encode_features = {'features': np.array(encode_fea), 'labels': labels}
+    sample_fc_features = {'features': np.array(fc_fea), 'labels': labels}
 
-    print('[%s Feature] Cover feature' % feature_name)
-    fea, labels = generate_features(cover_loader, mol, cuda)
-    features['features'] = np.array(fea)
-    features['labels'] = labels
+    print('[Feature] Generating Encode and fc Cover feature')
+    encode_fea, fc_fea, labels = generate_features(cover_loader, mol, cuda)
+    encode_features = {'features': np.array(encode_fea), 'labels': labels}
+    fc_features = {'features': np.array(fc_fea), 'labels': labels}
 
-    evaluate_cover_by_features(sample_features, features, save_dir, topk, feature_name)
+    evaluate_cover_by_features(sample_encode_features, encode_features, save_dir, topk, 'encode')
+    evaluate_cover_by_features(sample_fc_features, fc_features, save_dir, topk, 'fc')
 
     pass
 
@@ -208,21 +208,19 @@ def evaluate_cover(cover_loader, cover_sample_loader, mol, cuda, save_dir, topk=
 def evaluate_labeled_data(test_loader, mol, cuda):
     print('####### Evaluating Labeld Data ##########')
 
+    print('[Feature] Generating Encode and fc ImageNet validation feature')
+    encode_fea, fc_fea, labels = generate_features(test_loader, mol, cuda)
+    labels = [(x[0], x[1]) for x in labels]
+
     test_time = time.time()
-    print('[Encode Feature] ImageNet validation feature')
-    feature, labels = generate_features(test_loader, mol, cuda)
-    labels = [x[0] for x in labels]
-    similar_mat = cal_cos(feature)
+    similar_mat = cal_cos(encode_fea)
     encode_accuracy, _ = cal_accuracy(similar_mat, labels, topk=1)
     encode_top5accuracy, _ = cal_accuracy(similar_mat, labels, topk=5)
     print('[Encode Testing] Feature accuracy = %.5f%%; top5 accuracy = %.5f%%; time cost %.2fs'
           % (np.mean(encode_accuracy) * 100, np.mean(encode_top5accuracy) * 100, time.time() - test_time))
 
     test_time = time.time()
-    print('[FC Feature] ImageNet validation feature')
-    feature, labels = generate_features(test_loader, mol, cuda)
-    labels = [x[0] for x in labels]
-    similar_mat = cal_cos(feature)
+    similar_mat = cal_cos(fc_fea)
     fc_accuracy, _ = cal_accuracy(similar_mat, labels, topk=1)
     fc_top5accuracy, _ = cal_accuracy(similar_mat, labels, topk=5)
     print('[FC Testing] Feature accuracy = %.5f%%; top5 accuracy = %.5f%%; time cost %.2fs'
@@ -293,12 +291,10 @@ def cal_distance(X):
     return H + H.T - 2*G
 
 
-def cal_accuracy(similar_mat, labels, model_name=None, topk=5, asscending=False):
+def cal_accuracy(similar_mat, labels, model_name=None, topk=5, asscending=False, is_output=True):
     print('Calculating accuracy')
     accuracy = []
     similar_pic = {}
-    similar_pic_dir = 'similar_pic/%s/' % model_name
-    check_dir_exists(['similar_pic/', similar_pic_dir])
 
     for i, (label, img_name) in enumerate(labels):
         if asscending:
@@ -311,33 +307,33 @@ def cal_accuracy(similar_mat, labels, model_name=None, topk=5, asscending=False)
     print(np.mean(accuracy))
     out = {'similar_pic': similar_pic, 'accuracy': accuracy}
 
-    if model_name is None:
+    if model_name is not None and is_output:
+        similar_pic_dir = 'similar_pic/%s/' % model_name
+        check_dir_exists(['similar_pic/', similar_pic_dir])
         with open(os.path.join(similar_pic_dir, 'similar_res_%s.json' % model_name), 'w') as f:
             json.dump(out, f)
     return accuracy, similar_pic
 
 
-def generate_features(data_loader, mol, cuda, name='encode'):
-    features = []
+def generate_features(data_loader, mol, cuda):
+    fc_features = []
+    encode_features = []
     labels = []
     print('Total %d data batches' % len(data_loader))
     for step, (x, y) in enumerate(data_loader):
         b_x = Variable(x).cuda() if cuda else Variable(x)
         label = y
-        if name == 'encode':
-            feature = mol.get_encode_features(b_x).data
-        elif name == 'fc':
-            feature = mol.get_fc_features(b_x).data
-        else:
-            print('only encode and fc layer features are supported. Use encode feature instead!')
-            feature = mol.get_encode_features(b_x).data
-        feature = feature.cpu().numpy().tolist() if cuda else feature.numpy().tolist()
+        encode_feature = mol.get_encode_features(b_x).data
+        fc_feature = mol.get_fc_features(b_x).data
+        encode_feature = encode_feature.cpu().numpy().tolist() if cuda else encode_feature.numpy().tolist()
+        fc_feature = fc_feature.cpu().numpy().tolist() if cuda else fc_feature.numpy().tolist()
         labels.extend(label)
-        features.extend(feature)
+        encode_features.extend(encode_feature)
+        fc_features.extend(fc_feature)
 
         if step % 10 == 0:
             print('Step %d finished!' % step)
-    return features, labels
+    return encode_features, fc_features, labels
 
 
 def center_fix_size_transform(size):

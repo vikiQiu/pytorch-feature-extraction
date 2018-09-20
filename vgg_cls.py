@@ -109,8 +109,7 @@ def train(mol_short='VGGClass', main_model=VGGClass):
         # Evaluation cover
         if epoch % 5 == 0:
             eval_dir = os.path.join(evaluation_dir, 'epoch%d' % epoch)
-            evaluate_cover(cover_loader, cover_sample_loader, mol, cuda, eval_dir, feature_name='encode')
-            evaluate_cover(cover_loader, cover_sample_loader, mol, cuda, eval_dir, feature_name='fc')
+            evaluate_cover(cover_loader, cover_sample_loader, mol, cuda, eval_dir)
 
         # Testing classifier
         test_acc, test_top5acc = test(test_loader, mol, cuda, 'Full')
