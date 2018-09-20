@@ -301,6 +301,10 @@ def cal_accuracy(similar_mat, labels, model_name=None, topk=5, asscending=False,
             inds = np.argsort(similar_mat[i])[1:(topk + 1)]
         else:
             inds = np.argsort(similar_mat[i])[::-1][1:(topk + 1)]
+        assert(len(inds) == len(labels))
+        print(label, img_name)
+        print(labels[inds[0]][0])
+        print(labels[inds[1]][0])
         similar_pic[img_name] = [[labels[ind][1], labels[ind][0] == label] for ind in inds]
         accu = np.mean([labels[ind][0] == label for ind in inds])
         accuracy.append(accu)
