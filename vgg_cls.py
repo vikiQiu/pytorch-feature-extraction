@@ -53,7 +53,7 @@ class VGGClass(torch.nn.Module):
     def get_fc_features(self, x):
         fea = self.get_encode_features(x)
         for name, layer in self.classification._modules.items():
-            if name <= 3:
+            if int(name) <= 3:
                 fea = layer(fea)
         return fea
 
