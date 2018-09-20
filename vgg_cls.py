@@ -127,6 +127,7 @@ def train(mol_short='VGGClass', main_model=VGGClass):
         writer.add_scalar('test/class_top5accuracy', test_top5acc, epoch)
 
         step_time = time.time()
+        print('######### Training with %d batches total ##########' % len(train_loader))
         for step, (x, y) in enumerate(train_loader):
             b_x = Variable(x).cuda() if cuda else Variable(x)
             label = Variable(torch.Tensor([y[2][i] for i in range(len(y[0]))]).long())
