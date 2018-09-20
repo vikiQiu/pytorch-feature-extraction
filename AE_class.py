@@ -1,4 +1,5 @@
 import os
+import gc
 import torch
 import time
 import json
@@ -96,6 +97,8 @@ def test_decoder(test_loader, mol, cuda, name):
 
     print('[%s Testing] #### Final Score ####: Decoder error %.6f; Time cost %.2f s' %
           (name, loss_decoder, time.time() - step_time))
+
+    del b_x, b_y, prob_class, decoded
     return loss_decoder
 
 
@@ -195,6 +198,7 @@ def train_decoder_only(mol_short='AEClass_d', main_model=AEClass):
         # writer.add_scalar('test_cover/top5accuracy', test_top5acc, epoch)
 
         print('Sleeping...')
+        gc.collect()
         time.sleep(10)
 
         # Testing on ImageNet val
