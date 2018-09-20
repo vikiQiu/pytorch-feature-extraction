@@ -112,14 +112,14 @@ def train(mol_short='VGGClass', main_model=VGGClass):
             evaluate_cover(cover_loader, cover_sample_loader, mol, cuda, eval_dir)
 
         # Testing classifier
-        test_acc, test_top5acc = test(test_loader, mol, cuda, 'Full')
-        writer.add_scalar('test/class_accuracy', test_acc, epoch)
-        writer.add_scalar('test/class_top5accuracy', test_top5acc, epoch)
         encode_accuracy, encode_top5accuracy, fc_accuracy, fc_top5accuracy = evaluate_labeled_data(test_loader, mol, cuda)
         writer.add_scalar('test/encode_feature_accuracy', np.mean(encode_accuracy), epoch)
         writer.add_scalar('test/encode_feature_top5accuracy', np.mean(encode_top5accuracy), epoch)
         writer.add_scalar('test/fc_feature_accuracy', np.mean(fc_accuracy), epoch)
         writer.add_scalar('test/fc_feature_top5accuracy', np.mean(fc_top5accuracy), epoch)
+        test_acc, test_top5acc = test(test_loader, mol, cuda, 'Full')
+        writer.add_scalar('test/class_accuracy', test_acc, epoch)
+        writer.add_scalar('test/class_top5accuracy', test_top5acc, epoch)
 
         step_time = time.time()
         for step, (x, y) in enumerate(train_loader):

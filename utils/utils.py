@@ -301,7 +301,7 @@ def cal_accuracy(similar_mat, labels, model_name=None, topk=5, asscending=False,
             inds = np.argsort(similar_mat[i])[1:(topk + 1)]
         else:
             inds = np.argsort(similar_mat[i])[::-1][1:(topk + 1)]
-        assert(len(inds) == len(labels))
+        print(len(labels), len(inds))
         print(label, img_name)
         print(labels[inds[0]][0])
         print(labels[inds[1]][0])
