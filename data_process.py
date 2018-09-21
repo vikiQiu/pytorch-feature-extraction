@@ -283,7 +283,7 @@ class CoverDataset(Data.Dataset):
 
         if self.img_transform is not None:
             img = self.img_transform(img)
-        return img, img_name
+        return img, ('0', img_name, 0)
 
     def __len__(self):
         return len(self.img_list)

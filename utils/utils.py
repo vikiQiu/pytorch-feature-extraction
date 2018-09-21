@@ -244,16 +244,16 @@ def evaluate_cover_by_features(sample_features, features, save_dir, topk=20, nam
             dist = np.mean(np.abs(fea - fea_sample))
             similarity_dist.append(dist)
         inds = np.argsort(similarity_cos)[::-1][:topk]
-        labels = [[features['labels'][ind], similarity_cos[ind]] for ind in inds]
-        cos_out[sample_features['labels'][i]] = labels
-        imgs = [sample_features['labels'][i]]
+        labels = [[features['labels'][ind][1], similarity_cos[ind]] for ind in inds]
+        cos_out[sample_features['labels'][i][1]] = labels
+        imgs = [sample_features['labels'][i][1]]
         imgs.extend([x[0] for x in labels])
         save_images(imgs, os.path.join(save_dir, 'cos_%s' % name))
 
         inds = np.argsort(similarity_dist)[:topk]
-        labels = [[features['labels'][ind], similarity_dist[ind]] for ind in inds]
-        dist_out[sample_features['labels'][i]] = labels
-        imgs = [sample_features['labels'][i]]
+        labels = [[features['labels'][ind][1], similarity_dist[ind]] for ind in inds]
+        dist_out[sample_features['labels'][i][1]] = labels
+        imgs = [sample_features['labels'][i][1]]
         imgs.extend([x[0] for x in labels])
         save_images(imgs, os.path.join(save_dir, 'distance_%s' % name))
 
