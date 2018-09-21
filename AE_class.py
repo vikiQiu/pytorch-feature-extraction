@@ -182,10 +182,10 @@ def train_decoder_only(mol_short='AEClass_d', main_model=AEClass):
     print('Start training ...')
     cnt = 0
     for epoch in range(args.epoch):
-        if (epoch % 5 == 0) and epoch != 0:
+        if epoch % 5 == 0:
             # Evaluation on cover data
             eval_dir = os.path.join(evaluation_dir, 'epoch%d' % epoch)
-            evaluate_cover(cover_loader, cover_sample_loader, mol, cuda, eval_dir)
+            evaluate_cover(cover_val_loader, cover_sample_loader, mol, cuda, eval_dir)
 
         # Testing on Cover val
         print('######### Testing on Cover val Dataset ###########')
