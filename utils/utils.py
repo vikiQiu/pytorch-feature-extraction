@@ -244,14 +244,14 @@ def evaluate_cover_by_features(sample_features, features, save_dir, topk=20, nam
             dist = np.mean(np.abs(fea - fea_sample))
             similarity_dist.append(dist)
         inds = np.argsort(similarity_cos)[::-1][:topk]
-        labels = [[features['labels'][ind][1], similarity_cos[ind]] for ind in inds]
+        labels = [[features['labels'][ind][1], similarity_cos[ind], similarity_dist[ind]] for ind in inds]
         cos_out[sample_features['labels'][i][1]] = labels
         imgs = [sample_features['labels'][i][1]]
         imgs.extend([x[0] for x in labels])
         save_images(imgs, os.path.join(save_dir, 'cos_%s' % name))
 
         inds = np.argsort(similarity_dist)[:topk]
-        labels = [[features['labels'][ind][1], similarity_dist[ind]] for ind in inds]
+        labels = [[features['labels'][ind][1], similarity_cos[ind], similarity_dist[ind]] for ind in inds]
         dist_out[sample_features['labels'][i][1]] = labels
         imgs = [sample_features['labels'][i][1]]
         imgs.extend([x[0] for x in labels])
@@ -261,7 +261,7 @@ def evaluate_cover_by_features(sample_features, features, save_dir, topk=20, nam
             print('[Similar feature] output similar images.')
 
     out = {'cos': cos_out, 'distance': dist_out}
-    with open(os.path.join(save_dir, 'similar_data.json'), 'w') as f:
+    with open(os.path.join(save_dir, 'similar_%s_data.json' % name), 'w') as f:
         json.dump(out, f)
 
 
