@@ -86,7 +86,10 @@ def train(mol_short='VGGClass', main_model=VGGClass):
     evaluation_dir = 'res/evaluation_pic/%s_%s%s-%s' % (mol_short, args.model, '' if args.fea_c is None else args.fea_c, args.dataset)
     if os.path.exists(model_name) and args.load_model:
         print('Loading model ...')
-        mol = torch.load(model_name).to(device)
+        if cuda:
+            mol = torch.load(model_name).to(device)
+        else:
+            mol = torch.load(model_name, map_location='cpu')
     else:
         print('Init model ...')
         mol = main_model(args.fea_c).to(device)
