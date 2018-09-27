@@ -14,7 +14,7 @@ def train_args():
                              "Decoder have the similar architecture as the encoder.")
     # parser.add_argument("--img-transform", type=str, default='default', help="Image Transformer")
     parser.add_argument("--img-loader", type=str, default='default', help="Image Loader")
-    parser.add_argument("--epoch", type=int, default=100, help="Epoch number.")
+    parser.add_argument("--epoch", type=int, default=16, help="Epoch number.")
     parser.add_argument("--batch-size", type=int, default=256, help="Batch size.")
     parser.add_argument("--lr", type=float, default=1e-4, help="Learning rate.")
     parser.add_argument("--alpha", type=float, default=0.5, help="Learning rate.")
@@ -24,6 +24,9 @@ def train_args():
     parser.add_argument('--use-gpus', action='store_false', dest='cuda', default=True)
     parser.add_argument("--feature-channel", type=int, default=None, help="The output channels of encoder.",
                         dest='fea_c')
+    parser.add_argument("--imgnet-p", type=float, default=0,
+                        help="The percentage of ImageNet train dataset to train the classifier."
+                             "If 0, only train the decoder.")
 
     args = parser.parse_args()
 

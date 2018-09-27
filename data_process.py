@@ -94,21 +94,44 @@ def getDataset(args, train='train'):
     return dataset
 
 
-class TestDataLoader(Data.DataLoader):
-    def __init__(self, dataset, batch_size, shuffle, p=1, kwargs={}):
-        super().__init__(dataset, batch_size, shuffle, **kwargs)
-        self.p = p
+# class TestDataLoader(Data.DataLoader):
+#     def __init__(self, dataset, batch_size, shuffle, p=1, kwargs={}):
+#         sampled_dataset = SampledDataset(dataset, p)
+#         super().__init__(SampledDataset, batch_size, shuffle, **kwargs)
+#         self.p = p
+#
+#     def __len__(self):
+#         return int(len(self.batch_sampler)/self.p)
+
+
+class SampledDataset(Data.DataLoader):
+    def __init__(self, dataset, p, seed=223):
+        self.dat = dataset
+        self.dat_len = int(p * len(dataset))
+        self.inds = list(range(len(dataset)))
+        np.random.seed(seed)
+        np.random.shuffle(self.inds)
+
+    def __getitem__(self, idx):
+        return self.dat[self.inds[idx]]
 
     def __len__(self):
-        return int(len(self.batch_sampler)/self.p)
+        return self.dat_len
 
 
 def getDataLoader(args, kwargs, train='train', p=1):
-    dataset = getDataset(args, train)
-    if train != 'test':
-        return Data.DataLoader(dataset=dataset, batch_size=args.batch_size, shuffle=True, **kwargs)
+    if train == 'test':
+        dataset = getDataset(args, train)
+        dataset = SampledDataset(dataset, p)
+    elif train == 'fuse':
+        dimgnet = getDataset(args, 'train')
+        dimgnet = SampledDataset(dimgnet, p)
+        dcover = getDataset(args, train='cover')
+        dataset = FuseDataset(dcover, dimgnet)
     else:
-        return TestDataLoader(dataset=dataset, batch_size=args.batch_size, shuffle=True, p=p, kwargs=kwargs)
+        dataset = getDataset(args, train)
+
+    return Data.DataLoader(dataset=dataset, batch_size=args.batch_size, shuffle=True, **kwargs)
 
 
 ################################################################
@@ -289,14 +312,37 @@ class CoverDataset(Data.Dataset):
         return len(self.img_list)
 
 
+class FuseDataset(Data.Dataset):
+    def __init__(self, cover, imgnet):
+        self.cover = cover
+        self.cover_len = len(cover)
+        self.imgnet = imgnet
+        self.imgnet_len = len(imgnet)
+
+    def __getitem__(self, idx):
+        if idx < self.cover_len:
+            x, label = self.cover[idx]
+            label = list(label)
+            label.append(0) # no actual label, cannot train the classifier
+        else:
+            x, label = self.imgnet[idx - self.cover_len]
+            label = list(label)
+            label.append(1)
+        return x, tuple(label)
+
+    def __len__(self):
+        return self.cover_len + self.imgnet_len
+
+
 def testImageNetDataset(img_dir, label_dir, img_transform):
     dataset = ImageNetDataset(img_dir, label_dir, img_transform=img_transform)
     # dataset = ImageNetSubTrainDataset('E:\work\\feature generation\data\ILSVRC2012\ILSVRC2012_img_train_subset',
     #                                   img_transform=img_transform)
-    data_loader = TestDataLoader(dataset=dataset, batch_size=64, shuffle=True)
+    dataset = SampledDataset(dataset, 0.3)
+    data_loader = Data.DataLoader(dataset=dataset, batch_size=64, shuffle=True)
     print(len(data_loader))
 
-    for index, (img, label) in enumerate(dataset):
+    for index, (img, label) in enumerate(data_loader):
         if index % 1000 == 0:
             # img.show()
             print(index, img.shape)
