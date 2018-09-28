@@ -319,10 +319,13 @@ def train(args, mol_short='AEClass_both', main_model=AEClass):
     loss_decoder = nn.MSELoss()
     loss_class = nn.CrossEntropyLoss(reduction='none').cuda(cuda)
 
-    def loss_cls_fn(prob_class, label, weight):
-        lss = loss_class(prob_class, label) * weight
-        lss = torch.sum(lss)/torch.sum(weight)
-        return lss
+    def loss_cls_fn(prob_class, label, weight, beta=0.01):
+        if torch.sum(weights) == 0:
+            return 99999
+        else:
+            lss = loss_class(prob_class, label) * weight
+            lss = torch.sum(lss)/torch.sum(weight)
+            return lss * beta
 
     check_dir_exists(['res/', 'model', pic_dir, log_dir, 'res/evaluation_pic', evaluation_dir])
     loss_val = None
@@ -330,32 +333,32 @@ def train(args, mol_short='AEClass_both', main_model=AEClass):
     total, correct, top5correct, cnt = 0, 0, 0, 0
     print('Start training ...')
     for epoch in range(args.epoch):
-        if (epoch % 5 == 0) and epoch != 0:
-            # Evaluation on cover data
-            eval_dir = os.path.join(evaluation_dir, 'epoch%d' % epoch)
-            evaluate_cover(cover_loader, cover_sample_loader, mol, cuda, eval_dir)
-
-        # Testing on ImageNet val
-        print('######### Testing on ImageNet val Dataset ###########')
-        test_loss_decoder, test_loss_cls, test_acc, test_top5acc = test_cls_decoder(test_loader, mol, cuda, 'Full')
-        test_loss_decoder = test_decoder(test_loader, mol, cuda, 'Full')
-        # test_loss = (1 - args.alpha) * test_loss_cls + args.alpha * test_loss_decoder / 0.001
-        writer.add_scalar('test_imagenet/loss_decoder', test_loss_decoder, epoch)
-        writer.add_scalar('test_imagenet/loss_classifier', test_loss_cls, epoch)
-        # writer.add_scalar('test_imagenet/loss', test_loss, epoch)
-        writer.add_scalar('test_imagenet/accuracy', test_acc, epoch)
-        writer.add_scalar('test_imagenet/top5accuracy', test_top5acc, epoch)
-
-        # Testing on Cover val
-        print('######### Testing on Cover val Dataset ###########')
-        # test_loss_decoder, test_loss_cls, test_acc, test_top5acc = test_cls_decoder(cover_val_loader, mol, cuda, 'Full')
-        test_loss_decoder = test_decoder(cover_val_loader, mol, cuda, 'Full')
-        # test_loss = (1 - args.alpha) * test_loss_cls + args.alpha * test_loss_decoder / 0.001
-        writer.add_scalar('test_cover/loss_decoder', test_loss_decoder, epoch)
-        # writer.add_scalar('test_cover/loss_classifier', test_loss_cls, epoch)
-        # writer.add_scalar('test_cover/loss', test_loss, epoch)
-        # writer.add_scalar('test_cover/accuracy', test_acc, epoch)
-        # writer.add_scalar('test_cover/top5accuracy', test_top5acc, epoch)
+        # if (epoch % 5 == 0) and epoch != 0:
+        #     # Evaluation on cover data
+        #     eval_dir = os.path.join(evaluation_dir, 'epoch%d' % epoch)
+        #     evaluate_cover(cover_loader, cover_sample_loader, mol, cuda, eval_dir)
+        #
+        # # Testing on ImageNet val
+        # print('######### Testing on ImageNet val Dataset ###########')
+        # test_loss_decoder, test_loss_cls, test_acc, test_top5acc = test_cls_decoder(test_loader, mol, cuda, 'Full')
+        # test_loss_decoder = test_decoder(test_loader, mol, cuda, 'Full')
+        # # test_loss = (1 - args.alpha) * test_loss_cls + args.alpha * test_loss_decoder / 0.001
+        # writer.add_scalar('test_imagenet/loss_decoder', test_loss_decoder, epoch)
+        # writer.add_scalar('test_imagenet/loss_classifier', test_loss_cls, epoch)
+        # # writer.add_scalar('test_imagenet/loss', test_loss, epoch)
+        # writer.add_scalar('test_imagenet/accuracy', test_acc, epoch)
+        # writer.add_scalar('test_imagenet/top5accuracy', test_top5acc, epoch)
+        #
+        # # Testing on Cover val
+        # print('######### Testing on Cover val Dataset ###########')
+        # # test_loss_decoder, test_loss_cls, test_acc, test_top5acc = test_cls_decoder(cover_val_loader, mol, cuda, 'Full')
+        # test_loss_decoder = test_decoder(cover_val_loader, mol, cuda, 'Full')
+        # # test_loss = (1 - args.alpha) * test_loss_cls + args.alpha * test_loss_decoder / 0.001
+        # writer.add_scalar('test_cover/loss_decoder', test_loss_decoder, epoch)
+        # # writer.add_scalar('test_cover/loss_classifier', test_loss_cls, epoch)
+        # # writer.add_scalar('test_cover/loss', test_loss, epoch)
+        # # writer.add_scalar('test_cover/accuracy', test_acc, epoch)
+        # # writer.add_scalar('test_cover/top5accuracy', test_top5acc, epoch)
 
         step_time = time.time()
         for step, (x, y) in enumerate(fuse_loader):
@@ -375,7 +378,7 @@ def train(args, mol_short='AEClass_both', main_model=AEClass):
                 save_image(img_to_save, '%s/%s-%s.jpg' % (pic_dir, epoch, step))
 
             loss1 = loss_decoder(decoded, b_y)
-            loss2 = loss_cls_fn(prob_class, label, weights) * 0.01
+            loss2 = loss_cls_fn(prob_class, label, weights, beta=0.01)
             # loss = (1-args.alpha) * loss2 + args.alpha * loss1 / 0.01
             writer.add_scalar('train/loss_decoder', loss1, cnt)
             writer.add_scalar('train/loss_classifier', loss2, cnt)
@@ -385,16 +388,21 @@ def train(args, mol_short='AEClass_both', main_model=AEClass):
             loss1.backward(retain_graph=True)
             optimizer_d.step()
 
-            optimizer_cls.zero_grad()
-            loss2.backward()
-            optimizer_cls.step()
+            if loss2 != 99999:
+                optimizer_cls.zero_grad()
+                loss2.backward()
+                optimizer_cls.step()
 
             _, predicted = torch.max(prob_class.data, 1)
-            total += (weights == 1).sum()
-            correct += (predicted == label).sum().item()
-            top5pre = prob_class.topk(5, 1, True, True)
+            predicted = torch.Tensor([predicted[i] for i in range(len(weights)) if weights[i]==1])
+            label2 = torch.Tensor([label[i] for i in range(len(weights)) if weights[i]==1])
+            total += predicted.shape[0]
+            correct += (predicted == label2).sum().item()
+
+            prob_class2 = prob_class[[i for i in range(len(weights)) if weights[i]==1]]
+            top5pre = prob_class2.topk(5, 1, True, True)
             top5pre = top5pre[1].t()
-            top5correct += top5pre.eq(label.view(1, -1).expand_as(top5pre)).sum().item()
+            top5correct += top5pre.eq(label2.long().view(1, -1).expand_as(top5pre)).sum().item()
             writer.add_scalar('train/accuracy', correct/total, cnt)
             writer.add_scalar('train/top5_accuracy', top5correct/total, cnt)
 
