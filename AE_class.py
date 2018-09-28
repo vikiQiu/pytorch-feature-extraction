@@ -129,17 +129,18 @@ def test_cls_decoder(test_loader, mol, cuda, name):
     loss_class_fn = nn.CrossEntropyLoss().cuda(cuda)
     loss_decoder_fn = nn.MSELoss()
     step_time = time.time()
+    loss_decoder, loss_cls = [], []
     print('#### Start %s testing with %d batches ####' % (name, len(test_loader)))
 
     for step, (x, y) in enumerate(test_loader):
-        b_x = Variable(x).cuda() if cuda else Variable(x)
+        b_x = Variable(x, volatile=True).cuda() if cuda else Variable(x)
         b_y = b_x.detach().cuda() if cuda else b_x.detach()
         label = Variable(torch.Tensor([y[2][i] for i in range(len(y[0]))]).long())
         label = label.cuda() if cuda else label
 
         _, decoded, prob_class = mol(b_x)
-        loss_decoder = loss_decoder_fn(decoded, b_y)
-        loss_cls = loss_class_fn(prob_class, label)  # mean square error
+        loss_decoder.append(loss_decoder_fn(decoded, b_y).data[0])
+        loss_cls.append(loss_class_fn(prob_class, label).data[0])
 
         _, predicted = torch.max(prob_class.data, 1)
         total += label.size(0)
@@ -151,12 +152,12 @@ def test_cls_decoder(test_loader, mol, cuda, name):
         if step % 20 == 0:
             print('[%s Testing] Step: %d | Classification error %.6f; Decoder error %.6f; '
                   'Accuracy %.3f%%; Top5 Accuracy %.3f%%; Time cost %.2f s' %
-                  (name, step, loss_cls, loss_decoder, correct * 100 / total, top5correct * 100 / total, time.time() - step_time))
+                  (name, step, np.mean(loss_cls), np.mean(loss_decoder), correct * 100 / total, top5correct * 100 / total, time.time() - step_time))
             step_time = time.time()
 
     print('[%s Testing] #### Final Score ####: Test size %d; Accuracy %.3f%%; Top5 Accuracy %.3f%%; Time cost %.2f s' %
           (name, total, correct * 100 / total, top5correct * 100 / total, time.time() - step_time))
-    return loss_decoder, loss_cls, correct/total, top5correct/total
+    return np.mean(loss_cls), np.mean(loss_decoder), correct/total, top5correct/total
 
 
 def train_decoder_only(args, mol_short='AEClass_d', main_model=AEClass):
