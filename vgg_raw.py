@@ -79,10 +79,10 @@ def train():
     check_dir_exists([os.path.join(evaluation_dir, 'cos'), os.path.join(evaluation_dir, 'distance')])
     evaluate_cover(cover_val_loader, cover_sample_loader, vgg, cuda, evaluation_dir)
     encode_accuracy, encode_top5accuracy, fc_accuracy, fc_top5accuracy = evaluate_labeled_data(test_loader, vgg, cuda)
-    print('Encode accuracy:', encode_accuracy)
-    print('Encode top5 accuracy:', encode_top5accuracy)
-    print('Fc accuracy:', fc_accuracy)
-    print('Fc top5 accuracy:', fc_top5accuracy)
+    print('Encode accuracy:', np.mean(encode_accuracy))
+    print('Encode top5 accuracy:', np.mean(encode_top5accuracy))
+    print('Fc accuracy:', np.mean(fc_accuracy))
+    print('Fc top5 accuracy:', np.mean(fc_top5accuracy))
 
     total, correct, top5correct, loss_total = 0, 0, 0, 0
     for epoch in range(1):
