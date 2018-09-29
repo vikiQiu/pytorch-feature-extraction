@@ -32,17 +32,13 @@ class VGGNet(torch.nn.Module):
     def get_encode_features(self, x):
         fea = self.features(x)
         fea = fea.view(x.size(0), -1)
-        fea = self.classification.get_feature(fea)
         return fea
 
     def get_fc_features(self, x, return_both=False):
         fea = self.get_encode_features(x)
-        c = fea
-        for name, layer in self.classification._modules.items():
-            if int(name) <= 3:
-                c = layer(c)
+        fc = self.classification.get_feature(fea)
         if return_both:
-            return fea, c
+            return fea, fc
         else:
             return fea
 
