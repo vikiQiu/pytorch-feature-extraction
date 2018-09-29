@@ -64,9 +64,10 @@ def train():
         print('Init model ...')
         vgg = VGGNet(args.fea_c).to(device)
 
-    train_loader = getDataLoader(args, kwargs)
+    # train_loader = getDataLoader(args, kwargs)
     test_loader = getDataLoader(args, kwargs, train='test')
-    cover_loader = getDataLoader(args, kwargs, train='cover')
+    # cover_loader = getDataLoader(args, kwargs, train='cover')
+    cover_val_loader = getDataLoader(args, kwargs, train='cover_validation')
     cover_sample_loader = getDataLoader(args, kwargs, train='cover_sample')
 
     optimizer = torch.optim.Adam(list(vgg.parameters()), lr=args.lr)
@@ -76,7 +77,7 @@ def train():
 
     # Evaluation
     check_dir_exists([os.path.join(evaluation_dir, 'cos'), os.path.join(evaluation_dir, 'distance')])
-    evaluate_cover(cover_loader, cover_sample_loader, vgg, cuda, evaluation_dir)
+    evaluate_cover(cover_val_loader, cover_sample_loader, vgg, cuda, evaluation_dir)
     encode_accuracy, encode_top5accuracy, fc_accuracy, fc_top5accuracy = evaluate_labeled_data(test_loader, vgg, cuda)
     print('Encode accuracy:', encode_accuracy)
     print('Encode top5 accuracy:', encode_top5accuracy)
