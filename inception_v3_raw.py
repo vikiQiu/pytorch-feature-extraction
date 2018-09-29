@@ -16,40 +16,6 @@ from utils.utils import check_dir_exists, evaluate_cover, evaluate_labeled_data
 from utils.model_inception import inception_v3
 
 
-# class InceptionV3Net(torch.nn.Module):
-#     def __init__(self):
-#         super(InceptionV3Net, self).__init__()
-#
-#         mol = models.inception_v3(pretrained=True)
-#         features = list(mol.children())[:-1]
-#         self.features = nn.Sequential(*features)
-#         for p in self.features.parameters():
-#             p.requires_grad = False
-#
-#         classification = list(mol.children())[-1]
-#         self.classification = nn.Sequential(classification)
-#         for p in self.classification.parameters():
-#             p.requires_grad = False
-#
-#     def forward(self, x):
-#         fea = self.get_encode_features(x)
-#         c = self.classification(fea)
-#         return c
-#
-#     def get_encode_features(self, x):
-#         fea = self.features(x)
-#         fea = fea.view(x.size(0), -1)
-#         return fea
-#
-#     def get_fc_features(self, x, return_both=False):
-#         fea = self.get_encode_features(x)
-#         fc = self.classification(fea)
-#         if return_both:
-#             return fea, fc
-#         else:
-#             return fea
-
-
 def train(mol_short='inception_v3'):
     ################################################################
     # Arguments
@@ -82,13 +48,13 @@ def train(mol_short='inception_v3'):
     check_dir_exists(['res/', 'model', 'res/evaluation_pic', evaluation_dir])
 
     # Evaluation
-    # check_dir_exists([os.path.join(evaluation_dir, 'cos'), os.path.join(evaluation_dir, 'distance')])
-    # evaluate_cover(cover_val_loader, cover_sample_loader, vgg, cuda, evaluation_dir)
-    # encode_accuracy, encode_top5accuracy, fc_accuracy, fc_top5accuracy = evaluate_labeled_data(test_loader, vgg, cuda)
-    # print('Encode accuracy:', np.mean(encode_accuracy))
-    # print('Encode top5 accuracy:', np.mean(encode_top5accuracy))
-    # print('Fc accuracy:', np.mean(fc_accuracy))
-    # print('Fc top5 accuracy:', np.mean(fc_top5accuracy))
+    check_dir_exists([os.path.join(evaluation_dir, 'cos'), os.path.join(evaluation_dir, 'distance')])
+    evaluate_cover(cover_val_loader, cover_sample_loader, mol, cuda, evaluation_dir)
+    encode_accuracy, encode_top5accuracy, fc_accuracy, fc_top5accuracy = evaluate_labeled_data(test_loader, mol, cuda)
+    print('Encode accuracy:', np.mean(encode_accuracy))
+    print('Encode top5 accuracy:', np.mean(encode_top5accuracy))
+    print('Fc accuracy:', np.mean(fc_accuracy))
+    print('Fc top5 accuracy:', np.mean(fc_top5accuracy))
 
     total, correct, top5correct, loss_total = 0, 0, 0, 0
     for epoch in range(1):
