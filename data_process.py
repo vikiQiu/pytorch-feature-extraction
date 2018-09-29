@@ -47,7 +47,9 @@ default_transformer = transforms.Compose([
 )
 
 transformers = {'default': default_transformer, 'crop224': fix_size_transform(224),
-                'center_crop224': center_fix_size_transform(224)}
+                'center_crop224': center_fix_size_transform(224),
+                'crop299': fix_size_transform(299),
+                'center_crop299': center_fix_size_transform(299)}
 loaders = {'default': default_loader}
 
 
