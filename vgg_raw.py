@@ -11,7 +11,7 @@ import torch.nn as nn
 from torchvision.utils import save_image
 from data_process import getDataLoader
 from utils.arguments import train_args
-from utils.utils import check_dir_exists, evaluate_cover
+from utils.utils import check_dir_exists, evaluate_cover, evaluate_labeled_data
 from model import VGG16Feature, VGG16Classifier
 
 
@@ -69,6 +69,7 @@ def train():
         vgg = VGGNet(args.fea_c).to(device)
 
     train_loader = getDataLoader(args, kwargs)
+    test_loader = getDataLoader(args, kwargs, train='test')
     cover_loader = getDataLoader(args, kwargs, train='cover')
     cover_sample_loader = getDataLoader(args, kwargs, train='cover_sample')
 
@@ -80,12 +81,17 @@ def train():
     # Evaluation
     check_dir_exists([os.path.join(evaluation_dir, 'cos'), os.path.join(evaluation_dir, 'distance')])
     evaluate_cover(cover_loader, cover_sample_loader, vgg, cuda, evaluation_dir)
+    encode_accuracy, encode_top5accuracy, fc_accuracy, fc_top5accuracy = evaluate_labeled_data(test_loader, vgg, cuda)
+    print('Encode accuracy:', encode_accuracy)
+    print('Encode top5 accuracy:', encode_top5accuracy)
+    print('Fc accuracy:', fc_accuracy)
+    print('Fc top5 accuracy:', fc_top5accuracy)
 
     total, correct, top5correct, loss_total = 0, 0, 0, 0
     for epoch in range(1):
         step_time = time.time()
-        for step, (x, y) in enumerate(train_loader):
-            b_x = Variable(x).cuda() if cuda else Variable(x)
+        for step, (x, y) in enumerate(test_loader):
+            b_x = Variable(x, volatile=True).cuda() if cuda else Variable(x)
             label = Variable(torch.Tensor([y[2][i] for i in range(len(y[0]))]).long())
             label = label.cuda() if cuda else label
 
@@ -108,7 +114,7 @@ def train():
             if step % 10 == 0:
                 torch.save(vgg, model_name)
                 print('Epoch:', epoch, 'Step:', step, '|',
-                      'train loss %.6f; Time cost %.2f s; Classification error %.6f; '
+                      'test loss %.6f; Time cost %.2f s; Classification error %.6f; '
                       'Top1 Accuracy %.3f; Top5 Accuracy %.3f' %
                       (loss_total/total, time.time() - step_time, loss, correct*100/total, top5correct*100/total))
                 step_time = time.time()
