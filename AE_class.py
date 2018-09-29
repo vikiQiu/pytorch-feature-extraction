@@ -74,7 +74,7 @@ class AEClass(torch.nn.Module):
         if return_both:
             return fea, c
         else:
-            return fea
+            return c
 
 
 def get_optimized_params(mol, require, lr):

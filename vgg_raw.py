@@ -40,7 +40,7 @@ class VGGNet(torch.nn.Module):
         if return_both:
             return fea, fc
         else:
-            return fea
+            return fc
 
 
 def train():

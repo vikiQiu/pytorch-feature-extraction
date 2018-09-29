@@ -59,7 +59,7 @@ class VGGClass(torch.nn.Module):
         if return_both:
             return fea, c
         else:
-            return fea
+            return c
 
     def get_prob_class(self, x):
         return self.forward(x)
