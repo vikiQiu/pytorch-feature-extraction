@@ -67,7 +67,7 @@ def train(mol_short='resnet50'):
         mol = torch.load(model_name).to(device)
     else:
         print('Init model ...')
-        mol = inception_v3(pretrained=True, training=False).to(device)
+        mol = ResNet().to(device)
 
     # train_loader = getDataLoader(args, kwargs)
     test_loader = getDataLoader(args, kwargs, train='test')
