@@ -29,7 +29,6 @@ def fix_size_transform(size):
         transforms.Resize(size),
         transforms.RandomCrop((size, size)),
         transforms.ToTensor(), # range [0, 255] -> [0.0,1.0]
-        normalize,
         ]
     )
     return trans
@@ -40,7 +39,6 @@ def center_fix_size_transform(size):
         transforms.Resize(size),
         transforms.CenterCrop((size, size)),
         transforms.ToTensor(), # range [0, 255] -> [0.0,1.0]
-        normalize,
         ]
     )
     return trans
