@@ -20,11 +20,16 @@ def default_loader(img):
 ################################################################
 # Data Transformer
 ################################################################
+normalize = transforms.Normalize(mean=[0.485, 0.456, 0.406],
+                                 std=[0.229, 0.224, 0.225])
+
+
 def fix_size_transform(size):
     trans = transforms.Compose([
         transforms.Resize(size),
         transforms.RandomCrop((size, size)),
         transforms.ToTensor(), # range [0, 255] -> [0.0,1.0]
+        normalize,
         ]
     )
     return trans
@@ -35,6 +40,7 @@ def center_fix_size_transform(size):
         transforms.Resize(size),
         transforms.CenterCrop((size, size)),
         transforms.ToTensor(), # range [0, 255] -> [0.0,1.0]
+        normalize,
         ]
     )
     return trans
