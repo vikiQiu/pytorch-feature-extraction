@@ -41,9 +41,8 @@ class ResNet(torch.nn.Module):
         fea = self.features(x)
         fc = self.avg_pool(fea)
         fc = fc.view(fc.size(0), -1)
-        fea = fea.view(fea.size(0), -1)
         if return_both:
-            return fea, fc
+            return fc, fc
         else:
             return fc
 
