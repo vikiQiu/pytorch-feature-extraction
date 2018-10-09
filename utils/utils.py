@@ -104,6 +104,29 @@ def choose_cover_train(data_dir='E:\work\image enhancement\data\cover0712'):
     return
 
 
+def choose_cover_samples(data_dir='E:\work\image enhancement\data\cover0712', replace_file=None):
+    '''
+    Need 500 cover sample images, while only 141 samples.
+    Move 351 images from validation to samples
+    :param data_dir:
+    :return:
+    '''
+    files = os.listdir(os.path.join(data_dir, 'validation'))
+    files = [x for x in files if x.endswith('.jpg')]
+
+    np.random.seed(123)
+    inds = list(range(len(files)))
+    np.random.shuffle(inds)
+    sample_inds = inds[:351]
+    sample = [files[i] for i in sample_inds]
+    print('Sample number = %d' % (len(sample)))
+
+    print('Move sampled images')
+    for f in sample:
+        shutil.move(os.path.join(data_dir, 'validation', f), os.path.join(data_dir, 'samples', f))
+    return
+
+
 def check_train_data(pic_num):
     '''
     Prepare a subset of ILSVRC2012 ImageNet dataset.
