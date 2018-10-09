@@ -14,7 +14,7 @@ import torch.nn as nn
 from torchvision.utils import save_image
 from data_process import getDataLoader
 from utils.arguments import train_args
-from utils.utils import check_dir_exists, evaluate_cover
+from utils.utils import check_dir_exists, evaluate_cover, remove_dir_exists
 from model import VGGDecoder, VGG16Feature
 
 
@@ -45,7 +45,7 @@ class AEClass(torch.nn.Module):
 
     def forward(self, x):
         fea = self.features(x)
-        encode = self.small_features(fea)
+        encode = self.small_features(fea) if self.encode_channels != 512 else fea
         decode = self.decoder(encode)
 
         c = encode.view(x.size(0), -1)
@@ -107,7 +107,7 @@ def test_decoder(test_loader, mol, cuda, name):
         b_x = Variable(x, volatile=True).cuda() if cuda else Variable(x)
         b_y = b_x.detach().cuda() if cuda else b_x.detach()
 
-        _, decoded, prob_class = mol(b_x)
+        _, decoded, _ = mol(b_x)
         loss_decoder = loss_decoder_fn(decoded, b_y).data[0]
         decoders.append(loss_decoder)
 
@@ -119,7 +119,7 @@ def test_decoder(test_loader, mol, cuda, name):
     print('[%s Testing] #### Final Score ####: Decoder error %.6f; Time cost %.2f s' %
           (name, np.mean(decoders), time.time() - step_time))
 
-    del b_x, b_y, prob_class, decoded
+    del b_x, b_y, decoded
     return np.mean(decoders)
 
 
@@ -172,6 +172,7 @@ def train_decoder_only(args, mol_short='AEClass_d', main_model=AEClass):
 
     log_dir = 'log/log_%s_%s%s_model-%s/' %\
               (mol_short, args.model, '' if args.fea_c is None else args.fea_c, args.dataset)
+    remove_dir_exists([log_dir])
     writer = SummaryWriter(log_dir)
 
     start_time = time.time()
@@ -206,36 +207,35 @@ def train_decoder_only(args, mol_short='AEClass_d', main_model=AEClass):
     print('Start training ...')
     cnt = 0
     for epoch in range(args.epoch):
-        if epoch % 5 == 0:
-            # Evaluation on cover data
-            eval_dir = os.path.join(evaluation_dir, 'epoch%d' % epoch)
-            evaluate_cover(cover_val_loader, cover_sample_loader, mol, cuda, eval_dir)
-
-        # Testing on Cover val
-        print('######### Testing on Cover val Dataset ###########')
-        # test_loss_decoder, test_loss_cls, test_acc, test_top5acc = test_cls_decoder(cover_val_loader, mol, cuda, 'Full')
-        test_loss_decoder = test_decoder(cover_val_loader, mol, cuda, 'Full')
-        # test_loss = (1 - args.alpha) * test_loss_cls + args.alpha * test_loss_decoder / 0.001
-        writer.add_scalar('test_cover/loss_decoder', test_loss_decoder, epoch)
-        # writer.add_scalar('test_cover/loss_classifier', test_loss_cls, epoch)
-        # writer.add_scalar('test_cover/loss', test_loss, epoch)
-        # writer.add_scalar('test_cover/accuracy', test_acc, epoch)
-        # writer.add_scalar('test_cover/top5accuracy', test_top5acc, epoch)
-
-        print('Sleeping...')
-        # gc.collect()
-        time.sleep(60)
-
-        # Testing on ImageNet val
-        print('######### Testing on ImageNet val Dataset ###########')
-        # test_loss_decoder, test_loss_cls, test_acc, test_top5acc = test_cls_decoder(test_loader, mol, cuda, 'Full')
-        test_loss_decoder = test_decoder(test_loader, mol, cuda, 'Full')
-        # test_loss = (1 - args.alpha) * test_loss_cls + args.alpha * test_loss_decoder / 0.001
-        writer.add_scalar('test_imagenet/loss_decoder', test_loss_decoder, epoch)
-        # writer.add_scalar('test_imagenet/loss_classifier', test_loss_cls, epoch)
-        # writer.add_scalar('test_imagenet/loss', test_loss, epoch)
-        # writer.add_scalar('test_imagenet/accuracy', test_acc, epoch)
-        # writer.add_scalar('test_imagenet/top5accuracy', test_top5acc, epoch)
+        # if epoch % 5 == 0:
+        #     # Evaluation on cover data
+        #     eval_dir = os.path.join(evaluation_dir, 'epoch%d' % epoch)
+        #     evaluate_cover(cover_val_loader, cover_sample_loader, mol, cuda, eval_dir)
+        #
+        # # Testing on Cover val
+        # print('######### Testing on Cover val Dataset ###########')
+        # test_loss_decoder = test_decoder(cover_val_loader, mol, cuda, 'Full')
+        # # test_loss = (1 - args.alpha) * test_loss_cls + args.alpha * test_loss_decoder / 0.001
+        # writer.add_scalar('test_cover/loss_decoder', test_loss_decoder, epoch)
+        # # writer.add_scalar('test_cover/loss_classifier', test_loss_cls, epoch)
+        # # writer.add_scalar('test_cover/loss', test_loss, epoch)
+        # # writer.add_scalar('test_cover/accuracy', test_acc, epoch)
+        # # writer.add_scalar('test_cover/top5accuracy', test_top5acc, epoch)
+        #
+        # print('Sleeping...')
+        # # gc.collect()
+        # time.sleep(60)
+        #
+        # # Testing on ImageNet val
+        # print('######### Testing on ImageNet val Dataset ###########')
+        # # test_loss_decoder, test_loss_cls, test_acc, test_top5acc = test_cls_decoder(test_loader, mol, cuda, 'Full')
+        # test_loss_decoder = test_decoder(test_loader, mol, cuda, 'Full')
+        # # test_loss = (1 - args.alpha) * test_loss_cls + args.alpha * test_loss_decoder / 0.001
+        # writer.add_scalar('test_imagenet/loss_decoder', test_loss_decoder, epoch)
+        # # writer.add_scalar('test_imagenet/loss_classifier', test_loss_cls, epoch)
+        # # writer.add_scalar('test_imagenet/loss', test_loss, epoch)
+        # # writer.add_scalar('test_imagenet/accuracy', test_acc, epoch)
+        # # writer.add_scalar('test_imagenet/top5accuracy', test_top5acc, epoch)
 
         step_time = time.time()
         print('######### Training with %d batches total ##########' % len(cover_loader))
@@ -243,7 +243,7 @@ def train_decoder_only(args, mol_short='AEClass_d', main_model=AEClass):
             b_x = Variable(x).cuda() if cuda else Variable(x)
             b_y = b_x.detach().cuda() if cuda else b_x.detach()  # batch y, shape (batch, 32*32*3)
 
-            encoded, decoded, prob_class = mol(b_x)
+            _, decoded, prob_class = mol(b_x)
 
             if step % 100 == 0:
                 img_to_save = decoded.data
@@ -288,6 +288,7 @@ def train(args, mol_short='AEClass_both', main_model=AEClass):
 
     log_dir = 'log/log_%s_%s%s_model-%s/' %\
               (mol_short, args.model, '' if args.fea_c is None else args.fea_c, args.dataset)
+    remove_dir_exists([log_dir])
     writer = SummaryWriter(log_dir)
 
     start_time = time.time()
@@ -341,7 +342,6 @@ def train(args, mol_short='AEClass_both', main_model=AEClass):
         # Testing on ImageNet val
         print('######### Testing on ImageNet val Dataset ###########')
         test_loss_decoder, test_loss_cls, test_acc, test_top5acc = test_cls_decoder(test_loader, mol, cuda, 'Full')
-        test_loss_decoder = test_decoder(test_loader, mol, cuda, 'Full')
         # test_loss = (1 - args.alpha) * test_loss_cls + args.alpha * test_loss_decoder / 0.001
         writer.add_scalar('test_imagenet/loss_decoder', test_loss_decoder, epoch)
         writer.add_scalar('test_imagenet/loss_classifier', test_loss_cls, epoch)
@@ -371,7 +371,7 @@ def train(args, mol_short='AEClass_both', main_model=AEClass):
             weights = Variable(torch.Tensor([y[3][i] for i in range(len(y[0]))]))
             weights = weights.cuda() if cuda else weights
 
-            encoded, decoded, prob_class = mol(b_x)
+            _, decoded, prob_class = mol(b_x)
 
             if step % 100 == 0:
                 img_to_save = decoded.data

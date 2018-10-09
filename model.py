@@ -190,14 +190,15 @@ class VGGDecoder(nn.Module):
         return decode
 
     def _make_vgg_layers(self, cfg, batch_norm=False):
-        in_channels = int(512/8)
-        layers = [nn.Conv2d(512, in_channels, kernel_size=1)] if self.out_channels is None else [nn.Conv2d(32, in_channels, kernel_size=1)]
+        p = int(512/self.out_channels)
+        in_channels = int(512/p)
+        layers = [nn.Conv2d(512, in_channels, kernel_size=1)] if self.out_channels is None else [nn.Conv2d(self.out_channels, in_channels, kernel_size=1)]
         for v in cfg[::-1]:
             if v == 'M':
                 layers += [nn.ConvTranspose2d(in_channels=in_channels, out_channels=in_channels,
                                               kernel_size=4, stride=2, padding=1)]
             else:
-                vv = int(v/8)
+                vv = int(v/p)
                 conv2d = nn.Conv2d(in_channels, vv, kernel_size=3, padding=1)
                 if batch_norm:
                     layers += [conv2d, nn.BatchNorm2d(vv), nn.ReLU(inplace=True)]

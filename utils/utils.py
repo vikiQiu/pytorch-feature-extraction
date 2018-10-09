@@ -17,6 +17,12 @@ def check_dir_exists(dirs):
             os.mkdir(d)
 
 
+def remove_dir_exists(dirs):
+    for d in dirs:
+        if os.path.exists(d):
+            shutil.rmtree(d)
+
+
 def prepare_train_data(pic_num):
     '''
     Prepare a subset of ILSVRC2012 ImageNet dataset.
