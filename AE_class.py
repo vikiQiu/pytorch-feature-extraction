@@ -337,7 +337,7 @@ def train(args, mol_short='AEClass_both', main_model=AEClass):
         if (epoch % 5 == 0) and epoch != 0:
             # Evaluation on cover data
             eval_dir = os.path.join(evaluation_dir, 'epoch%d' % epoch)
-            evaluate_cover(cover_loader, cover_sample_loader, mol, cuda, eval_dir)
+            evaluate_cover(cover_loader, cover_sample_loader, mol, cuda, eval_dir, args)
 
         # Testing on ImageNet val
         print('######### Testing on ImageNet val Dataset ###########')

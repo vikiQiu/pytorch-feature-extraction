@@ -117,7 +117,7 @@ def train(mol_short='VGGClass', main_model=VGGClass):
         # Evaluation cover
         if epoch % 5 == 0:
             eval_dir = os.path.join(evaluation_dir, 'epoch%d' % epoch)
-            evaluate_cover(cover_val_loader, cover_sample_loader, mol, cuda, eval_dir)
+            evaluate_cover(cover_val_loader, cover_sample_loader, mol, cuda, eval_dir, args)
 
             encode_accuracy, encode_top5accuracy, fc_accuracy, fc_top5accuracy = evaluate_labeled_data(test_loader, mol, cuda)
             writer.add_scalar('test/encode_feature_accuracy', np.mean(encode_accuracy), epoch)
