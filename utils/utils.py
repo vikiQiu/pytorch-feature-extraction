@@ -127,6 +127,51 @@ def choose_cover_samples(data_dir='E:\work\image enhancement\data\cover0712', re
     return
 
 
+def update_cover_labels(json_file, label_file):
+    '''
+    Update the judge json to the label json
+    :param json_file: in the directory 'res/evaluation_pic/your_model_name/similar_fc_data.json'
+    :param label_file: The label file stored in cover data directory
+    :return:
+    '''
+    with open(json_file) as f:
+        dat = json.load(f)['cos']
+
+    samples = sorted(list(dat.keys()))
+
+    if os.path.exists(label_file):
+        with open(label_file) as f:
+            labels = json.load(f)
+    else:
+        labels = {s: {} for s in samples}
+
+    judge_file = os.path.join(os.path.dirname(json_file), 'judge_cos_fc_labels.json')
+
+    if os.path.exists(judge_file):
+        with open(judge_file) as f:
+            judges = json.load(f)
+        for sample in list(judges.keys()):
+            good = judges[sample]['good']
+            bad = judges[sample]['bad']
+            ok = set(range(len(dat[sample]))) - set(good) - set(bad)
+            for ind in good:
+                labels[sample][dat[sample][ind][0]] = 2
+            for ind in ok:
+                labels[sample][dat[sample][ind][0]] = 1
+            for ind in bad:
+                labels[sample][dat[sample][ind][0]] = -1
+
+        with open(label_file, 'w') as f:
+            json.dump(labels, f)
+
+    else:
+        judges = {s: {'good': [], 'bad': []} for s in samples}
+        print(samples, len(samples))
+        print(judges)
+        with open(judge_file, 'w') as f:
+            json.dump(judges, f)
+
+
 def check_train_data(pic_num):
     '''
     Prepare a subset of ILSVRC2012 ImageNet dataset.
@@ -387,4 +432,6 @@ def save_images(files, pic_dir):
 if __name__ == '__main__':
     # prepare_train_data(200)
     # check_cover_data('E:\work\\feature generation\data\cover\images')
-    choose_cover_train('E:\work\\feature generation\data\cover')
+    # choose_cover_train('E:\work\\feature generation\data\cover')
+    update_cover_labels('..\\res\evaluation_pic\Fin\inception_v3_conv-ImageNet1000-val\similar_fc_data.json',
+                        label_file='E:\work\\feature generation\data\cover\\val_labels.json')
