@@ -50,7 +50,7 @@ class AEClass(torch.nn.Module):
 
         c = encode.view(x.size(0), -1)
         c = self.classification(c)
-        return encode, decode, c
+        return None, decode, c
 
     def get_encode_features(self, x):
         fea = self.features(x)
@@ -98,28 +98,28 @@ def get_optimized_params(mol, require, lr):
 
 
 def test_decoder(test_loader, mol, cuda, name):
-    loss_decoder_fn = nn.MSELoss()
     step_time = time.time()
     print('#### Start %s testing with %d batches ####' % (name, len(test_loader)))
 
     decoders = []
     for step, (x, y) in enumerate(test_loader):
-        b_x = Variable(x, volatile=True).cuda() if cuda else Variable(x)
-        b_y = b_x.detach().cuda() if cuda else b_x.detach()
+        x = x.detach().cuda() if cuda else x.detach()
+        b_y = x.detach().cuda() if cuda else x.detach()  # batch y, shape (batch, 32*32*3)
 
-        _, decoded, _ = mol(b_x)
-        loss_decoder = loss_decoder_fn(decoded, b_y).data[0]
-        decoders.append(loss_decoder)
+        _, decoded, _ = mol(x)
 
-        if step % 20 == 0:
+        loss_decoder = F.mse_loss(decoded, b_y)
+        loss_decoder.backward()
+        decoders.append(loss_decoder.item())
+
+        if step % 1 == 0:
             print('[%s Testing] Step: %d | Decoder error %.6f; Time cost %.2f s' %
-                  (name, step, loss_decoder, time.time() - step_time))
+                  (name, step, loss_decoder.item(), time.time() - step_time))
             step_time = time.time()
 
     print('[%s Testing] #### Final Score ####: Decoder error %.6f; Time cost %.2f s' %
           (name, np.mean(decoders), time.time() - step_time))
 
-    del b_x, b_y, decoded
     return np.mean(decoders)
 
 
