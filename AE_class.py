@@ -180,7 +180,7 @@ def train_decoder_only(args, mol_short='AEClass_d', main_model=AEClass):
 
     start_time = time.time()
     d_name = '' if args.decoder == 'vgg' else args.decoder+'decoder'
-    model_name = 'model/%s%s_%s%s_model-%s.pkl' \
+    model_name = 'model/%s_%s_%s%s_model-%s.pkl' \
                  % (mol_short, d_name, args.model, '' if args.fea_c is None else args.fea_c, args.dataset)
     print('[Model] model name is', model_name)
     pic_dir = 'res/%s_%s%s-%s/' % (mol_short, args.model, '' if args.fea_c is None else args.fea_c, args.dataset)
