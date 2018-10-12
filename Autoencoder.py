@@ -214,13 +214,36 @@ def test():
         mol = AutoEncoder(args.fea_c).to(device)
 
     print('Prepare data loader ...')
-    train_loader = getDataLoader(args, kwargs, train='train', p=0.25)
+    test_loader = getDataLoader(args, kwargs, train='test', p=0.2)
+    train_loader = getDataLoader(args, kwargs, train='train', p=0.05)
     # test_loader = getDataLoader(args, kwargs, train='test')
-    cover_val_loader = getDataLoader(args, kwargs, train='cover_validation')
+    cover_val_loader = getDataLoader(args, kwargs, train='cover_validation', p=0.2)
 
     step_time = time.time()
+
+    loss_val = []
+    print('######### Testing with %d batches total of imagenet val ##########' % len(test_loader))
+    for step, (x, y) in enumerate(train_loader):
+        b_x = Variable(x).cuda() if cuda else Variable(x)
+        b_y = b_x.detach().cuda() if cuda else b_x.detach()  # batch y, shape (batch, 32*32*3)
+
+        _, decoded = mol(b_x)
+        loss_tmp = F.mse_loss(decoded, b_y)
+        loss_val.append(loss_tmp.item())
+
+        if step % 500 == 0:
+            img_to_save = decoded.data
+            save_image(img_to_save, '%s/imagenet_train_step%s.jpg' % (pic_dir, step))
+
+        if step % 10 == 0:
+            print('[Testing] Step %d; Decoder loss= = %.5f; time cost %.2fs'
+                  % (step, np.mean(loss_val), time.time() - step_time))
+            step_time = time.time()
+
+    print('ImageNet val decoder loss = %.4f' % np.mean(loss_val))
+
     loss = []
-    print('######### Testing with %d batches total ##########' % len(train_loader))
+    print('######### Testing with %d batches total of imagenet train ##########' % len(train_loader))
     for step, (x, y) in enumerate(train_loader):
         b_x = Variable(x).cuda() if cuda else Variable(x)
         b_y = b_x.detach().cuda() if cuda else b_x.detach()  # batch y, shape (batch, 32*32*3)
@@ -238,10 +261,10 @@ def test():
                   % (step, np.mean(loss), time.time() - step_time))
             step_time = time.time()
 
-    print('ImageNet val decoder loss = %.4f' % np.mean(loss))
+    print('ImageNet train decoder loss = %.4f' % np.mean(loss))
 
     loss_cover = []
-    print('######### Testing with %d batches total ##########' % len(cover_val_loader))
+    print('######### Testing with %d batches total of cover val##########' % len(cover_val_loader))
     for step, (x, y) in enumerate(cover_val_loader):
         b_x = Variable(x).cuda() if cuda else Variable(x)
         b_y = b_x.detach().cuda() if cuda else b_x.detach()  # batch y, shape (batch, 32*32*3)

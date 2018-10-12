@@ -136,6 +136,7 @@ def getDataLoader(args, kwargs, train='train', p=1):
         dataset = FuseDataset(dcover, dimgnet)
     else:
         dataset = getDataset(args, train)
+        dataset = SampledDataset(dataset, p)
 
     return Data.DataLoader(dataset=dataset, batch_size=args.batch_size, shuffle=True, **kwargs)
 
