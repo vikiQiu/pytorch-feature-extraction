@@ -61,11 +61,11 @@ class SimpleDecoder(nn.Module):
         self.decoder = nn.Sequential(
 
             nn.ConvTranspose2d(
-                in_channels=256,
+                in_channels=512,
                 out_channels=128,
-                kernel_size=4,
+                kernel_size=2,
                 stride=2,
-                padding=1,
+                padding=0,
             ),
             nn.BatchNorm2d(num_features=128, affine=True),
             nn.LeakyReLU(),
@@ -82,6 +82,26 @@ class SimpleDecoder(nn.Module):
 
             nn.ConvTranspose2d(
                 in_channels=64,
+                out_channels=32,
+                kernel_size=4,
+                stride=2,
+                padding=1,
+            ),
+            nn.BatchNorm2d(num_features=32, affine=True),
+            nn.LeakyReLU(),
+
+            nn.ConvTranspose2d(
+                in_channels=32,
+                out_channels=16,
+                kernel_size=4,
+                stride=2,
+                padding=1,
+            ),
+            nn.BatchNorm2d(num_features=16, affine=True),
+            nn.LeakyReLU(),
+
+            nn.ConvTranspose2d(
+                in_channels=16,
                 out_channels=3,
                 kernel_size=4,
                 stride=2,

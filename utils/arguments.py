@@ -27,6 +27,8 @@ def train_args():
     parser.add_argument("--imgnet-p", type=float, default=0,
                         help="The percentage of ImageNet train dataset to train the classifier."
                              "If 0, only train the decoder.")
+    parser.add_argument("--decoder", type=str, default='vgg',
+                        help="Decoder structure. Now support ['vgg', 'simple'].")
 
     args = parser.parse_args()
 
