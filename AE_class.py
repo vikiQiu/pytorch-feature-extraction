@@ -182,6 +182,7 @@ def train_decoder_only(args, mol_short='AEClass_d', main_model=AEClass):
     d_name = '' if args.decoder == 'vgg' else args.decoder+'decoder'
     model_name = 'model/%s%s_%s%s_model-%s.pkl' \
                  % (mol_short, d_name, args.model, '' if args.fea_c is None else args.fea_c, args.dataset)
+    print('[Model] model name is', model_name)
     pic_dir = 'res/%s_%s%s-%s/' % (mol_short, args.model, '' if args.fea_c is None else args.fea_c, args.dataset)
     evaluation_dir = 'res/evaluation_pic/%s_%s%s-%s' % (mol_short, args.model, '' if args.fea_c is None else args.fea_c, args.dataset)
     if os.path.exists(model_name) and args.load_model:
