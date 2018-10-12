@@ -28,31 +28,47 @@ def init_model(model, args):
     return ae
 
 
+# class AutoEncoder(torch.nn.Module):
+#     def __init__(self, encode_channels=32):
+#         super(AutoEncoder, self).__init__()
+#
+#         self.encode_channels = encode_channels
+#         self.features = VGG16Feature()
+#         self.small_features = nn.Sequential(
+#             nn.Conv2d(512, 128, kernel_size=1),
+#             nn.BatchNorm2d(128),
+#             nn.ReLU(inplace=True),
+#             nn.Conv2d(128, encode_channels, kernel_size=1),
+#             nn.BatchNorm2d(encode_channels),
+#             nn.ReLU(inplace=True)
+#         )
+#         self.decoder = VGGDecoder(model='vgg16', out_channels=encode_channels)
+#
+#     def forward(self, x):
+#         encoded = self.encode(x)
+#         decoded = self.decoder(encoded)
+#         return encoded, decoded
+#
+#     def encode(self, x):
+#         encoded = self.features(x)
+#         encoded = self.small_features(encoded)
+#         return encoded
+
+
 class AutoEncoder(torch.nn.Module):
-    def __init__(self, encode_channels=32):
+    def __init__(self, encoder, decoder):
         super(AutoEncoder, self).__init__()
 
-        self.encode_channels = encode_channels
-        self.features = VGG16Feature()
-        self.small_features = nn.Sequential(
-            nn.Conv2d(512, 128, kernel_size=1),
-            nn.BatchNorm2d(128),
-            nn.ReLU(inplace=True),
-            nn.Conv2d(128, encode_channels, kernel_size=1),
-            nn.BatchNorm2d(encode_channels),
-            nn.ReLU(inplace=True)
-        )
-        self.decoder = VGGDecoder(model='vgg16', out_channels=encode_channels)
+        self.encoder = encoder
+        self.decoder = decoder
 
     def forward(self, x):
-        encoded = self.encode(x)
-        decoded = self.decoder(encoded)
-        return encoded, decoded
+        encode = self.encoder(x)
+        decode = self.decoder(encode)
+        return encode, decode
 
     def encode(self, x):
-        encoded = self.features(x)
-        encoded = self.small_features(encoded)
-        return encoded
+        return self.encoder(x)
 
 
 def get_feature_loss(data_loader, mol, cuda):
