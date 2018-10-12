@@ -207,7 +207,7 @@ def train_decoder_only(args, mol_short='AEClass_d', main_model=AEClass):
     print('Start training ...')
     cnt = 0
     for epoch in range(args.epoch):
-        if epoch % 5 == 0:
+        if epoch % 5 == (5-1) or epoch == (args.epoch - 1):
             # Evaluation on cover data
             eval_dir = os.path.join(evaluation_dir, 'epoch%d' % epoch)
             evaluate_cover(cover_val_loader, cover_sample_loader, mol, cuda, eval_dir)
@@ -245,7 +245,7 @@ def train_decoder_only(args, mol_short='AEClass_d', main_model=AEClass):
 
             _, decoded, prob_class = mol(b_x)
 
-            if step % 100 == 0:
+            if step % 500 == 0 or step == (len(cover_loader) - 1):
                 img_to_save = decoded.data
                 save_image(img_to_save, '%s/%s-%s.jpg' % (pic_dir, epoch, step))
 
@@ -261,7 +261,7 @@ def train_decoder_only(args, mol_short='AEClass_d', main_model=AEClass):
 
             loss_val = 0.99*loss_val + 0.01*loss.data[0] if loss_val is not None else loss.data[0]
 
-            if step % 10 == 0:
+            if step % 10 == 0 or step == (len(cover_loader) - 1):
                 if os.path.exists(model_name):
                     shutil.copy2(model_name, model_name.split('.pkl')[0]+'_back.pkl')
                 torch.save(mol, model_name)
