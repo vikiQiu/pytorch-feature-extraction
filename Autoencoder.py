@@ -4,6 +4,7 @@ import time
 import json
 import shutil
 import numpy as np
+import torch.nn.functional as F
 import torch.utils.data as Data
 from torch.autograd import Variable
 from tensorboardX import SummaryWriter
@@ -77,7 +78,7 @@ def get_feature_loss(data_loader, mol, cuda):
     return features, labels, loss
 
 
-def test(test_loader, mol, cuda, name):
+def test_feature(test_loader, mol, cuda, name):
     test_time = time.time()
     print('#### Start %s testing with %d batches ####' % (name, len(test_loader)))
 
@@ -129,7 +130,7 @@ def train():
     print('Start training ...')
     for epoch in range(args.epoch):
         # Testing
-        test_acc, test_top5acc, test_loss = test(test_loader, mol, cuda, 'Full')
+        test_acc, test_top5acc, test_loss = test_feature(test_loader, mol, cuda, 'Full')
         writer.add_scalar('test/accuracy', np.mean(test_acc), epoch)
         writer.add_scalar('test/top5accuracy', np.mean(test_top5acc), epoch)
         writer.add_scalar('test/loss_decoder', test_loss, epoch)
@@ -170,7 +171,83 @@ def train():
     writer.close()
 
 
+def test():
+    ################################################################
+    # Arguments
+    ################################################################
+    ae_args = train_args()
+    cuda = ae_args.cuda and torch.cuda.is_available()
+    device = torch.device("cuda" if cuda else "cpu")
+    kwargs = {'num_workers': 1, 'pin_memory': True} if ae_args.cuda else {}
+    # global ae_args, cuda, device, kwargs
+    args = ae_args
+
+    log_dir = 'log/log_AE_%s%s_model-%s/' %\
+              (args.model, '' if args.fea_c is None else args.fea_c, args.dataset)
+    writer = SummaryWriter(log_dir)
+
+    start_time = time.time()
+    model_name = 'model/AE_%s%s_model-%s.pkl' % (args.model, '' if args.fea_c is None else args.fea_c, args.dataset)
+    pic_dir = 'res/AE_%s%s-%s/' % (args.model, '' if args.fea_c is None else args.fea_c, args.dataset)
+    if os.path.exists(model_name) and args.load_model:
+        print('Loading model ...')
+        mol = torch.load(model_name).to(device)
+    else:
+        print('Init model ...')
+        mol = AutoEncoder(args.fea_c).to(device)
+
+    print('Prepare data loader ...')
+    train_loader = getDataLoader(args, kwargs, train='train', p=0.25)
+    # test_loader = getDataLoader(args, kwargs, train='test')
+    cover_val_loader = getDataLoader(args, kwargs, train='cover_validation')
+
+    step_time = time.time()
+    loss = []
+    print('######### Testing with %d batches total ##########' % len(train_loader))
+    for step, (x, y) in enumerate(train_loader):
+        b_x = Variable(x).cuda() if cuda else Variable(x)
+        b_y = b_x.detach().cuda() if cuda else b_x.detach()  # batch y, shape (batch, 32*32*3)
+
+        _, decoded = mol(b_x)
+        loss_tmp = F.mse_loss(decoded, b_y)
+        loss.append(loss_tmp.item())
+
+        if step % 500 == 0:
+            img_to_save = decoded.data
+            save_image(img_to_save, '%s/imagenet_train_step%s.jpg' % (pic_dir, step))
+
+        if step % 10 == 0:
+            print('[Testing] Step %d; Decoder loss= = %.5f; time cost %.2fs'
+                  % (step, np.mean(loss), time.time() - step_time))
+            step_time = time.time()
+
+    print('ImageNet val decoder loss = %.4f' % np.mean(loss))
+
+    loss_cover = []
+    print('######### Testing with %d batches total ##########' % len(cover_val_loader))
+    for step, (x, y) in enumerate(cover_val_loader):
+        b_x = Variable(x).cuda() if cuda else Variable(x)
+        b_y = b_x.detach().cuda() if cuda else b_x.detach()  # batch y, shape (batch, 32*32*3)
+
+        _, decoded = mol(b_x)
+        loss_tmp = F.mse_loss(decoded, b_y)
+        loss_cover.append(loss_tmp.item())
+
+        if step % 500 == 0:
+            img_to_save = decoded.data
+            save_image(img_to_save, '%s/cover_val_step%s.jpg' % (pic_dir, step))
+
+        if step % 10 == 0:
+            print('[Testing] Step %d; Decoder loss= = %.5f; time cost %.2fs'
+                  % (step, np.mean(loss_cover), time.time() - step_time))
+            step_time = time.time()
+
+    print("0.25 ImageNet train decoder loss = %.4f; Cover val decoder loss = %.4f"
+          % (np.mean(loss), np.mean(loss_cover)))
+
+
 if __name__ == '__main__':
-    train()
+    # train()
+    test()
     # model_name = 'AE_%s%s_model-%s' % (args.model, '' if args.fea_c is None else args.fea_c, args.dataset)
     # evaluate_pic('similar_pic/%s/' % model_name, model_name)
