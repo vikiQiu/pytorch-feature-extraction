@@ -260,7 +260,7 @@ def test(test_loader, mol, cuda, name):
     return correct/total, top5correct/total
 
 
-def evaluate_cover(cover_loader, cover_sample_loader, mol, cuda, save_dir, topk=23):
+def evaluate_cover(cover_loader, cover_sample_loader, mol, cuda, save_dir, args, topk=23):
     print('####### Evaluating Cover Data (Choose top%d similar images in the samples) ##########' % topk)
 
     print('[Feature] Generating Encode and fc Sample cover feature')
@@ -268,13 +268,24 @@ def evaluate_cover(cover_loader, cover_sample_loader, mol, cuda, save_dir, topk=
     sample_encode_features = {'features': np.array(encode_fea), 'labels': labels}
     sample_fc_features = {'features': np.array(fc_fea), 'labels': labels}
 
+    label_file = os.path.join(args.cover_dir, 'val_labels.json')
+    if os.path.exists(label_file):
+        with open(label_file) as f:
+            cover_label = json.load(f)
+            cover_label = {os.path.basename(l): {os.path.basename(ll): cover_label[l][ll] for ll in cover_label[l]}
+                           for l in cover_label}
+    else:
+        cover_label = {os.path.basename(x[1]): {} for x in labels}
+
+    print(cover_label, len(cover_label))
+
     print('[Feature] Generating Encode and fc Cover feature')
     encode_fea, fc_fea, labels = generate_features(cover_loader, mol, cuda)
     encode_features = {'features': np.array(encode_fea), 'labels': labels}
     fc_features = {'features': np.array(fc_fea), 'labels': labels}
 
     evaluate_cover_by_features(sample_encode_features, encode_features, save_dir, topk, 'encode')
-    evaluate_cover_by_features(sample_fc_features, fc_features, save_dir, topk, 'fc')
+    evaluate_cover_by_features(sample_fc_features, fc_features, save_dir, topk, 'fc', cover_label)
 
     pass
 
@@ -302,11 +313,33 @@ def evaluate_labeled_data(test_loader, mol, cuda):
     return encode_accuracy, encode_top5accuracy, fc_accuracy, fc_top5accuracy
 
 
-def evaluate_cover_by_features(sample_features, features, save_dir, topk=20, name='encode'):
+def evaluate_cover_by_features(sample_features, features, save_dir, topk=20, name='encode', cover_label=None):
+    '''
+    cos_out: {sample_img_name: [val_img_name, cos, distance, judged_label(-1, 0, 1, 2)]}
+    judged_label:
+        2: good
+        1: ok
+        0: not judge yet
+        -1: bad
+    :param sample_features: Sample cover features {'features': np.array, 'labels': ['0', img_name]}
+    :param features: Training or validation cover features{'features': np.array, 'labels': ['0', img_name]}
+    :param save_dir: The directory to save the json result and the images
+    :param topk: choose topk similar images to generate the image
+    :param name: ['encode', 'fc']
+    :param cover_label: If cover_label=None, do not judge the label.
+                        {sample_img_name: {val_img_name: label(-1, 0, 1, 2)}}
+    :return:
+    '''
+    print('Evaluating cover by %s features ... ' % name)
     cos_out = {}
     dist_out = {}
     check_dir_exists([save_dir, os.path.join(save_dir, 'cos_%s' % name), os.path.join(save_dir, 'distance_%s' % name)])
     for i in range(len(sample_features['features'])):
+        if cover_label is not None:
+            judges = cover_label[os.path.basename(sample_features['labels'][i][1])]
+            cos_top1_accuracy = []
+            cos_top5_accuracy = []
+            cos_top10_accuracy = []
         fea_sample = np.array([sample_features['features'][i]])
         norm = np.dot(fea_sample, fea_sample.T)
         similarity_cos = []
@@ -319,6 +352,14 @@ def evaluate_cover_by_features(sample_features, features, save_dir, topk=20, nam
             similarity_dist.append(dist)
         inds = np.argsort(similarity_cos)[::-1][:topk]
         labels = [[features['labels'][ind][1], similarity_cos[ind], similarity_dist[ind]] for ind in inds]
+        if cover_label is not None:
+            for l in [os.path.basename(x[0]) for x in labels]:
+                if l not in judges.keys():
+                    judges[l] = 0
+            labels = [[x[0], x[1], x[2], judges[os.path.basename(x[0])]] for x in labels]
+            cos_top1_accuracy.append(labels[0][3])
+            cos_top5_accuracy.extend([x[3] for x in labels[:5]])
+            cos_top10_accuracy.extend([x[3] for x in labels[:10]])
         cos_out[sample_features['labels'][i][1]] = labels
         imgs = [sample_features['labels'][i][1]]
         imgs.extend([x[0] for x in labels])
@@ -334,6 +375,20 @@ def evaluate_cover_by_features(sample_features, features, save_dir, topk=20, nam
         if i % 10 == 0:
             print('[Similar feature] output similar images.')
 
+    if cover_label is not None:
+        cos_top1_accuracy = np.array(cos_top1_accuracy)
+        cos_top5_accuracy = np.array(cos_top5_accuracy)
+        cos_top10_accuracy = np.array(cos_top10_accuracy)
+        print('[Result] Accuracy of cover features:')
+        print('[Top1 cos] NOT BAD accuracy = %.4f; GOOD accuracy = %.4f; BAD accuracy = %.4f; NOT SURE rate = %.4f'
+              % (np.mean(cos_top1_accuracy > 0), np.mean(cos_top1_accuracy == 2),
+                 np.mean(cos_top1_accuracy == -1), np.mean(cos_top1_accuracy == 0)))
+        print('[Top5 cos] NOT BAD accuracy = %.4f; GOOD accuracy = %.4f; BAD accuracy = %.4f; NOT SURE rate = %.4f'
+              % (np.mean(cos_top5_accuracy > 0), np.mean(cos_top5_accuracy == 2),
+                 np.mean(cos_top5_accuracy == -1), np.mean(cos_top5_accuracy == 0)))
+        print('[Top10 cos] NOT BAD accuracy = %.4f; GOOD accuracy = %.4f; BAD accuracy = %.4f; NOT SURE rate = %.4f'
+              % (np.mean(cos_top10_accuracy > 0), np.mean(cos_top10_accuracy == 2),
+                 np.mean(cos_top10_accuracy == -1), np.mean(cos_top10_accuracy == 0)))
     out = {'cos': cos_out, 'distance': dist_out}
     with open(os.path.join(save_dir, 'similar_%s_data.json' % name), 'w') as f:
         json.dump(out, f)
@@ -395,7 +450,7 @@ def generate_features(data_loader, mol, cuda):
     labels = []
     print('Total %d data batches' % len(data_loader))
     for step, (x, y) in enumerate(data_loader):
-        b_x = Variable(x).cuda() if cuda else Variable(x)
+        b_x = Variable(x, volatile=True).cuda() if cuda else Variable(x)
         label = [(y[0][i], y[1][i]) for i in range(len(y[0]))]
         encode_feature, fc_feature = mol.get_fc_features(b_x, return_both=True)
         encode_feature = encode_feature.data.cpu().numpy().tolist() if cuda else encode_feature.data.numpy().tolist()
