@@ -92,8 +92,9 @@ def get_optimized_params(mol, require, lr):
         return [{'params': x, 'lr': lr} for x in params]
     elif 'vgg' in require:
         params = []
+        require = int(require.split('.')[1])
         for name, param in mol.features.named_parameters():
-            if require in name:
+            if int(name.split('.')[1]) >= require:
                 params.append({'params': param, 'lr': lr/10})
         return params
     else:
@@ -204,7 +205,7 @@ def train_decoder_only(args, mol_short='AEClass_d', main_model=AEClass):
                                   # list(mol.decoder.parameters()), lr=args.lr)
     optimizer1 = torch.optim.Adam(get_optimized_params(mol, 'small_features', args.lr)+
                                   get_optimized_params(mol, 'decoder', args.lr)+
-                                  get_optimized_params(mol, 'vgg.41', args.lr/5),
+                                  get_optimized_params(mol, 'vgg.38', args.lr/5),
                                   lr=args.lr)
     loss_decoder = nn.MSELoss()
 
