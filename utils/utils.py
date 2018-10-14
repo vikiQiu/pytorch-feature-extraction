@@ -284,7 +284,7 @@ def evaluate_cover(cover_loader, cover_sample_loader, mol, cuda, save_dir, args,
     encode_features = {'features': np.array(encode_fea), 'labels': labels}
     fc_features = {'features': np.array(fc_fea), 'labels': labels}
 
-    evaluate_cover_by_features(sample_encode_features, encode_features, save_dir, topk, 'encode')
+    # evaluate_cover_by_features(sample_encode_features, encode_features, save_dir, topk, 'encode')
     evaluate_cover_by_features(sample_fc_features, fc_features, save_dir, topk, 'fc', cover_label)
 
     pass
@@ -334,12 +334,13 @@ def evaluate_cover_by_features(sample_features, features, save_dir, topk=20, nam
     cos_out = {}
     dist_out = {}
     check_dir_exists([save_dir, os.path.join(save_dir, 'cos_%s' % name), os.path.join(save_dir, 'distance_%s' % name)])
+
+    cos_top1_accuracy = []
+    cos_top5_accuracy = []
+    cos_top10_accuracy = []
     for i in range(len(sample_features['features'])):
         if cover_label is not None:
             judges = cover_label[os.path.basename(sample_features['labels'][i][1])]
-            cos_top1_accuracy = []
-            cos_top5_accuracy = []
-            cos_top10_accuracy = []
         fea_sample = np.array([sample_features['features'][i]])
         norm = np.dot(fea_sample, fea_sample.T)
         similarity_cos = []
@@ -379,6 +380,9 @@ def evaluate_cover_by_features(sample_features, features, save_dir, topk=20, nam
         cos_top1_accuracy = np.array(cos_top1_accuracy)
         cos_top5_accuracy = np.array(cos_top5_accuracy)
         cos_top10_accuracy = np.array(cos_top10_accuracy)
+        print(cos_top1_accuracy, len(cos_top1_accuracy))
+        print(cos_top5_accuracy, len(cos_top5_accuracy))
+        print(cos_top10_accuracy, len(cos_top10_accuracy))
         print('[Result] Accuracy of cover features:')
         print('[Top1 cos] NOT BAD accuracy = %.4f; GOOD accuracy = %.4f; BAD accuracy = %.4f; NOT SURE rate = %.4f'
               % (np.mean(cos_top1_accuracy > 0), np.mean(cos_top1_accuracy == 2),
