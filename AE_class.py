@@ -34,7 +34,7 @@ class AEClass(torch.nn.Module):
         if decoder == 'vgg':
             self.decoder = VGGDecoder(model='vgg16', out_channels=encode_channels)
         else:
-            self.decoder = SimpleDecoder()
+            self.decoder = VGGDecoder(model='Simple', out_channels=encode_channels)
         self.classification = nn.Sequential(
             nn.Linear(encode_channels * 7 * 7, 1024),
             nn.ReLU(inplace=True),
@@ -173,15 +173,16 @@ def train_decoder_only(args, mol_short='AEClass_d', main_model=AEClass):
     kwargs = {'num_workers': 1, 'pin_memory': True} if ae_args.cuda else {}
     # global ae_args, cuda, device, kwargs
 
+    d_name = '' if args.decoder == 'vgg' else args.decoder+'decoder'
+    mol_short = mol_short + '_' + d_name
     log_dir = 'log/log_%s_%s%s_model-%s/' %\
               (mol_short, args.model, '' if args.fea_c is None else args.fea_c, args.dataset)
     remove_dir_exists([log_dir])
     writer = SummaryWriter(log_dir)
 
     start_time = time.time()
-    d_name = '' if args.decoder == 'vgg' else args.decoder+'decoder'
-    model_name = 'model/%s_%s_%s%s_model-%s.pkl' \
-                 % (mol_short, d_name, args.model, '' if args.fea_c is None else args.fea_c, args.dataset)
+    model_name = 'model/%s_%s%s_model-%s.pkl' \
+                 % (mol_short, args.model, '' if args.fea_c is None else args.fea_c, args.dataset)
     print('[Model] model name is', model_name)
     pic_dir = 'res/%s_%s%s-%s/' % (mol_short, args.model, '' if args.fea_c is None else args.fea_c, args.dataset)
     evaluation_dir = 'res/evaluation_pic/%s_%s%s-%s' % (mol_short, args.model, '' if args.fea_c is None else args.fea_c, args.dataset)
