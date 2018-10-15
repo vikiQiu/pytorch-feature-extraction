@@ -165,6 +165,7 @@ def test_cls_decoder(test_loader, mol, cuda, name):
 
 
 def train_decoder_only(args, mol_short='AEClass_d', main_model=AEClass):
+    print('######### This is train decoder only function #############')
     ################################################################
     # Arguments
     ################################################################
@@ -283,6 +284,7 @@ def train_decoder_only(args, mol_short='AEClass_d', main_model=AEClass):
 
 
 def train(args, mol_short='AEClass_both', main_model=AEClass):
+    print('######### This is train function #############')
     ################################################################
     # Arguments
     ################################################################
@@ -291,6 +293,8 @@ def train(args, mol_short='AEClass_both', main_model=AEClass):
     device = torch.device("cuda" if cuda else "cpu")
     kwargs = {'num_workers': 1, 'pin_memory': True} if ae_args.cuda else {}
 
+    d_name = '' if args.decoder == 'vgg' else args.decoder + 'decoder'
+    mol_short = mol_short + '_' + d_name
     log_dir = 'log/log_%s_%s%s_model-%s/' %\
               (mol_short, args.model, '' if args.fea_c is None else args.fea_c, args.dataset)
     remove_dir_exists([log_dir])
@@ -298,6 +302,7 @@ def train(args, mol_short='AEClass_both', main_model=AEClass):
 
     start_time = time.time()
     model_name = 'model/%s_%s%s_model-%s.pkl' % (mol_short, args.model, '' if args.fea_c is None else args.fea_c, args.dataset)
+    print('[Model] model name is', model_name)
     pic_dir = 'res/%s_%s%s-%s/' % (mol_short, args.model, '' if args.fea_c is None else args.fea_c, args.dataset)
     evaluation_dir = 'res/evaluation_pic/%s_%s%s-%s' % (mol_short, args.model, '' if args.fea_c is None else args.fea_c, args.dataset)
     if os.path.exists(model_name) and args.load_model:
@@ -317,10 +322,10 @@ def train(args, mol_short='AEClass_both', main_model=AEClass):
 
     optimizer_cls = torch.optim.Adam(get_optimized_params(mol, 'classifier', lr=args.lr) +
                                      get_optimized_params(mol, 'small_features', lr=args.lr) +
-                                     get_optimized_params(mol, 'vgg.41', lr=args.lr/10), lr=args.lr)
+                                     get_optimized_params(mol, 'vgg.38', lr=args.lr/5), lr=args.lr)
     optimizer_d = torch.optim.Adam(get_optimized_params(mol, 'small_features', args.lr) +
                                    get_optimized_params(mol, 'decoder', args.lr) +
-                                   get_optimized_params(mol, 'vgg.41', args.lr / 10),
+                                   get_optimized_params(mol, 'vgg.38', args.lr / 5),
                                    lr=args.lr)
     loss_decoder = nn.MSELoss()
     loss_class = nn.CrossEntropyLoss(reduction='none').cuda(cuda)
@@ -334,7 +339,6 @@ def train(args, mol_short='AEClass_both', main_model=AEClass):
             return lss * beta
 
     check_dir_exists(['res/', 'model', pic_dir, log_dir, 'res/evaluation_pic', evaluation_dir])
-    loss_val = None
 
     total, correct, top5correct, cnt = 0, 0, 0, 0
     print('Start training ...')
@@ -344,26 +348,27 @@ def train(args, mol_short='AEClass_both', main_model=AEClass):
             eval_dir = os.path.join(evaluation_dir, 'epoch%d' % epoch)
             evaluate_cover(cover_loader, cover_sample_loader, mol, cuda, eval_dir, args)
 
-        # Testing on ImageNet val
-        print('######### Testing on ImageNet val Dataset ###########')
-        test_loss_decoder, test_loss_cls, test_acc, test_top5acc = test_cls_decoder(test_loader, mol, cuda, 'Full')
-        # test_loss = (1 - args.alpha) * test_loss_cls + args.alpha * test_loss_decoder / 0.001
-        writer.add_scalar('test_imagenet/loss_decoder', test_loss_decoder, epoch)
-        writer.add_scalar('test_imagenet/loss_classifier', test_loss_cls, epoch)
-        # writer.add_scalar('test_imagenet/loss', test_loss, epoch)
-        writer.add_scalar('test_imagenet/accuracy', test_acc, epoch)
-        writer.add_scalar('test_imagenet/top5accuracy', test_top5acc, epoch)
+        if epoch != 0:
+            # Testing on ImageNet val
+            print('######### Testing on ImageNet val Dataset ###########')
+            test_loss_decoder, test_loss_cls, test_acc, test_top5acc = test_cls_decoder(test_loader, mol, cuda, 'Full')
+            # test_loss = (1 - args.alpha) * test_loss_cls + args.alpha * test_loss_decoder / 0.001
+            writer.add_scalar('test_imagenet/loss_decoder', test_loss_decoder, epoch)
+            writer.add_scalar('test_imagenet/loss_classifier', test_loss_cls, epoch)
+            # writer.add_scalar('test_imagenet/loss', test_loss, epoch)
+            writer.add_scalar('test_imagenet/accuracy', test_acc, epoch)
+            writer.add_scalar('test_imagenet/top5accuracy', test_top5acc, epoch)
 
-        # Testing on Cover val
-        print('######### Testing on Cover val Dataset ###########')
-        # test_loss_decoder, test_loss_cls, test_acc, test_top5acc = test_cls_decoder(cover_val_loader, mol, cuda, 'Full')
-        test_loss_decoder = test_decoder(cover_val_loader, mol, cuda, 'Full')
-        # test_loss = (1 - args.alpha) * test_loss_cls + args.alpha * test_loss_decoder / 0.001
-        writer.add_scalar('test_cover/loss_decoder', test_loss_decoder, epoch)
-        # writer.add_scalar('test_cover/loss_classifier', test_loss_cls, epoch)
-        # writer.add_scalar('test_cover/loss', test_loss, epoch)
-        # writer.add_scalar('test_cover/accuracy', test_acc, epoch)
-        # writer.add_scalar('test_cover/top5accuracy', test_top5acc, epoch)
+            # Testing on Cover val
+            print('######### Testing on Cover val Dataset ###########')
+            # test_loss_decoder, test_loss_cls, test_acc, test_top5acc = test_cls_decoder(cover_val_loader, mol, cuda, 'Full')
+            test_loss_decoder = test_decoder(cover_val_loader, mol, cuda, 'Full')
+            # test_loss = (1 - args.alpha) * test_loss_cls + args.alpha * test_loss_decoder / 0.001
+            writer.add_scalar('test_cover/loss_decoder', test_loss_decoder, epoch)
+            # writer.add_scalar('test_cover/loss_classifier', test_loss_cls, epoch)
+            # writer.add_scalar('test_cover/loss', test_loss, epoch)
+            # writer.add_scalar('test_cover/accuracy', test_acc, epoch)
+            # writer.add_scalar('test_cover/top5accuracy', test_top5acc, epoch)
 
         step_time = time.time()
         for step, (x, y) in enumerate(fuse_loader):
