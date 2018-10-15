@@ -177,7 +177,7 @@ def train_decoder_only(args, mol_short='AEClass_d', main_model=AEClass):
     # global ae_args, cuda, device, kwargs
 
     d_name = '' if args.decoder == 'vgg' else '_' + args.decoder + 'decoder'
-    mol_short = mol_short + '_' + d_name
+    mol_short = mol_short + args.name + d_name
     log_dir = 'log/log_%s_%s%s_model-%s/' %\
               (mol_short, args.model, '' if args.fea_c is None else args.fea_c, args.dataset)
     remove_dir_exists([log_dir])
@@ -295,7 +295,7 @@ def train(args, mol_short='AEClass_both', main_model=AEClass):
     kwargs = {'num_workers': 1, 'pin_memory': True} if ae_args.cuda else {}
 
     d_name = '' if args.decoder == 'vgg' else '_' + args.decoder + 'decoder'
-    mol_short = mol_short + d_name
+    mol_short = mol_short + args.name + d_name
     log_dir = 'log/log_%s_%s%s_model-%s/' %\
               (mol_short, args.model, '' if args.fea_c is None else args.fea_c, args.dataset)
     remove_dir_exists([log_dir])

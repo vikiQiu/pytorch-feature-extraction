@@ -30,6 +30,8 @@ def train_args():
                              "If 0, only train the decoder.")
     parser.add_argument("--decoder", type=str, default='vgg',
                         help="Decoder structure. Now support ['vgg', 'simple'].")
+    parser.add_argument("--name", type=str, default='',
+                        help="model name notification. e.g: '(try)'")
 
     args = parser.parse_args()
 
