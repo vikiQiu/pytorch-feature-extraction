@@ -394,14 +394,19 @@ def train(args, mol_short='AEClass_both', main_model=AEClass):
             writer.add_scalar('train/loss_classifier', loss2, cnt)
             # writer.add_scalar('train/loss', loss, cnt)
 
-            optimizer_d.zero_grad()
-            loss1.backward(retain_graph=True)
-            optimizer_d.step()
-
             if loss2 != 99999:
+                optimizer_d.zero_grad()
+                loss1.backward(retain_graph=True)
+                optimizer_d.step()
+
                 optimizer_cls.zero_grad()
                 loss2.backward()
                 optimizer_cls.step()
+
+            else:
+                optimizer_d.zero_grad()
+                loss1.backward()
+                optimizer_d.step()
 
             _, predicted = torch.max(prob_class.data, 1)
             predicted = torch.Tensor([predicted[i] for i in range(len(weights)) if weights[i]==1])
