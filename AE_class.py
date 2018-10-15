@@ -145,8 +145,7 @@ def test_cls_decoder(test_loader, mol, cuda, name):
         _, decoded, prob_class = mol(b_x)
         loss_d = loss_decoder_fn(decoded, b_y)
         loss_c = loss_class_fn(prob_class, label)
-        loss_d.backward()
-        loss_c.backward()
+        (loss_d + loss_c).backward()
         loss_decoder.append(loss_d.item())
         loss_cls.append(loss_c.item())
 
@@ -360,7 +359,7 @@ def train(args, mol_short='AEClass_both', main_model=AEClass):
             eval_dir = os.path.join(evaluation_dir, 'epoch%d' % epoch)
             evaluate_cover(cover_loader, cover_sample_loader, mol, cuda, eval_dir, args)
 
-        if epoch > 0:
+        if epoch >= 0:
             # Testing on ImageNet val
             print('######### Testing on ImageNet val Dataset ###########')
             test_loss_decoder, test_loss_cls, test_acc, test_top5acc = test_cls_decoder(test_loader, mol, cuda, 'Full')
