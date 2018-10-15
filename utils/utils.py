@@ -170,6 +170,45 @@ def update_cover_labels(json_file, label_file):
         print(judges)
         with open(judge_file, 'w') as f:
             json.dump(judges, f)
+        labels = judges
+
+    return labels
+
+
+def judge_cover_labels(json_file, label_file):
+    '''
+    Judge the cover json file by the label file.
+    :param json_file: in the res/evaluation_pic/xxx/
+    :param label_file: in the cover dicrectory
+    :return: Get top1 accuracy and so on .
+    '''
+    with open(json_file) as f:
+        dat = json.load(f)['cos']
+    with open(label_file) as f:
+        labels = json.load(f)
+
+    cos_top1_accuracy = []
+    cos_top5_accuracy = []
+    cos_top10_accuracy = []
+    for s_img in dat.keys():
+        judges = [labels[s_img][l[0]] for l in dat[s_img]]
+        cos_top1_accuracy.append(judges[0])
+        cos_top5_accuracy.extend(judges[:5])
+        cos_top10_accuracy.extend(judges[:10])
+
+    cos_top1_accuracy = np.array(cos_top1_accuracy)
+    cos_top5_accuracy = np.array(cos_top5_accuracy)
+    cos_top10_accuracy = np.array(cos_top10_accuracy)
+    print('[Result] Accuracy of cover features:')
+    print('[Top1 cos] NOT BAD accuracy = %.4f; GOOD accuracy = %.4f; BAD accuracy = %.4f; NOT SURE rate = %.4f'
+          % (np.mean(cos_top1_accuracy > 0), np.mean(cos_top1_accuracy == 2),
+             np.mean(cos_top1_accuracy == -1), np.mean(cos_top1_accuracy == 0)))
+    print('[Top5 cos] NOT BAD accuracy = %.4f; GOOD accuracy = %.4f; BAD accuracy = %.4f; NOT SURE rate = %.4f'
+          % (np.mean(cos_top5_accuracy > 0), np.mean(cos_top5_accuracy == 2),
+             np.mean(cos_top5_accuracy == -1), np.mean(cos_top5_accuracy == 0)))
+    print('[Top10 cos] NOT BAD accuracy = %.4f; GOOD accuracy = %.4f; BAD accuracy = %.4f; NOT SURE rate = %.4f'
+          % (np.mean(cos_top10_accuracy > 0), np.mean(cos_top10_accuracy == 2),
+             np.mean(cos_top10_accuracy == -1), np.mean(cos_top10_accuracy == 0)))
 
 
 def check_train_data(pic_num):
@@ -380,9 +419,6 @@ def evaluate_cover_by_features(sample_features, features, save_dir, topk=20, nam
         cos_top1_accuracy = np.array(cos_top1_accuracy)
         cos_top5_accuracy = np.array(cos_top5_accuracy)
         cos_top10_accuracy = np.array(cos_top10_accuracy)
-        print(cos_top1_accuracy, len(cos_top1_accuracy))
-        print(cos_top5_accuracy, len(cos_top5_accuracy))
-        print(cos_top10_accuracy, len(cos_top10_accuracy))
         print('[Result] Accuracy of cover features:')
         print('[Top1 cos] NOT BAD accuracy = %.4f; GOOD accuracy = %.4f; BAD accuracy = %.4f; NOT SURE rate = %.4f'
               % (np.mean(cos_top1_accuracy > 0), np.mean(cos_top1_accuracy == 2),
@@ -492,5 +528,7 @@ if __name__ == '__main__':
     # prepare_train_data(200)
     # check_cover_data('E:\work\\feature generation\data\cover\images')
     # choose_cover_train('E:\work\\feature generation\data\cover')
-    update_cover_labels('..\\res\evaluation_pic\Fin\inception_v3_conv-ImageNet1000-val\similar_fc_data.json',
-                        label_file='E:\work\\feature generation\data\cover\\val_labels.json')
+    # labels = update_cover_labels('..\\res\evaluation_pic\Fin\inception_v3_conv-ImageNet1000-val\similar_fc_data.json',
+    #                              label_file='E:\work\\feature generation\data\cover\\val_labels.json')
+    judge_cover_labels('..\\res\evaluation_pic\Fin\inception_v3_conv-ImageNet1000-val\similar_fc_data.json',
+                                 label_file='E:\work\\feature generation\data\cover\\val_labels.json')
