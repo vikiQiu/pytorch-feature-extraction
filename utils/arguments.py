@@ -17,7 +17,8 @@ def train_args():
     parser.add_argument("--epoch", type=int, default=16, help="Epoch number.")
     parser.add_argument("--batch-size", type=int, default=256, help="Batch size.")
     parser.add_argument("--lr", type=float, default=1e-4, help="Learning rate.")
-    parser.add_argument("--alpha", type=float, default=0.5, help="Learning rate.")
+    parser.add_argument("--alpha", type=float, default=0.5,
+                        help="weight of decoder loss; 1-alpha is weight of cls loss.")
     parser.add_argument("--img-size", type=int, default=224,
                         help="Height Weight of the training images after transform.")
     parser.add_argument('--load-model', action="store_true", default=False)
