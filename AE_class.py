@@ -19,7 +19,7 @@ from model import VGGDecoder, VGG16Feature, SimpleDecoder
 
 
 class AEClass(torch.nn.Module):
-    def __init__(self, encode_channels=32, num_class=1000, decoder='vgg'):
+    def __init__(self, encode_channels=32, num_class=1000, decoder='vgg', encoder='vgg'):
         super(AEClass, self).__init__()
 
         self.encode_channels = encode_channels
@@ -144,8 +144,12 @@ def test_cls_decoder(test_loader, mol, cuda, name):
         label = label.cuda() if cuda else label
 
         _, decoded, prob_class = mol(b_x)
-        loss_decoder.append(loss_decoder_fn(decoded, b_y).data[0])
-        loss_cls.append(loss_class_fn(prob_class, label).data[0])
+        loss_d = loss_decoder_fn(decoded, b_y)
+        loss_c = loss_class_fn(prob_class, label)
+        loss_d.backward()
+        loss_c.backward()
+        loss_decoder.append(loss_d.item())
+        loss_cls.append(loss_c.item())
 
         _, predicted = torch.max(prob_class.data, 1)
         total += label.size(0)
@@ -357,7 +361,7 @@ def train(args, mol_short='AEClass_both', main_model=AEClass):
             eval_dir = os.path.join(evaluation_dir, 'epoch%d' % epoch)
             evaluate_cover(cover_loader, cover_sample_loader, mol, cuda, eval_dir, args)
 
-        if epoch != 0:
+        if epoch > 0:
             # Testing on ImageNet val
             print('######### Testing on ImageNet val Dataset ###########')
             test_loss_decoder, test_loss_cls, test_acc, test_top5acc = test_cls_decoder(test_loader, mol, cuda, 'Full')
