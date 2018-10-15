@@ -24,13 +24,14 @@ class AEClass(torch.nn.Module):
 
         self.encode_channels = encode_channels
         self.features = VGG16Feature()
-        self.small_features = nn.Sequential(
-            nn.Conv2d(512, 128, kernel_size=1),
-            nn.BatchNorm2d(128),
-            nn.ReLU(inplace=True),
-            nn.Conv2d(128, encode_channels, kernel_size=1),
-            nn.BatchNorm2d(encode_channels),
-        )
+        if encode_channels != 512:
+            self.small_features = nn.Sequential(
+                nn.Conv2d(512, 128, kernel_size=1),
+                nn.BatchNorm2d(128),
+                nn.ReLU(inplace=True),
+                nn.Conv2d(128, encode_channels, kernel_size=1),
+                nn.BatchNorm2d(encode_channels),
+            )
         if decoder == 'vgg':
             self.decoder = VGGDecoder(model='vgg16', out_channels=encode_channels)
         else:
@@ -204,7 +205,7 @@ def train_decoder_only(args, mol_short='AEClass_d', main_model=AEClass):
 
     # optimizer1 = torch.optim.Adam(list(mol.classification.parameters())+list(mol.small_features.parameters())+
                                   # list(mol.decoder.parameters()), lr=args.lr)
-    optimizer1 = torch.optim.Adam(get_optimized_params(mol, 'small_features', args.lr)+
+    optimizer1 = torch.optim.Adam(([] if args.fea_c == 512 else get_optimized_params(mol, 'small_features', args.lr)) +
                                   get_optimized_params(mol, 'decoder', args.lr)+
                                   get_optimized_params(mol, 'vgg.38', args.lr/5),
                                   lr=args.lr)
@@ -307,7 +308,10 @@ def train(args, mol_short='AEClass_both', main_model=AEClass):
     evaluation_dir = 'res/evaluation_pic/%s_%s%s-%s' % (mol_short, args.model, '' if args.fea_c is None else args.fea_c, args.dataset)
     if os.path.exists(model_name) and args.load_model:
         print('Loading model ...')
-        mol = torch.load(model_name).to(device)
+        if cuda:
+            mol = torch.load(model_name).to(device)
+        else:
+            mol = torch.load(model_name, map_location='cpu')
     else:
         print('Init model ...')
         mol = main_model(args.fea_c).to(device)
@@ -320,13 +324,18 @@ def train(args, mol_short='AEClass_both', main_model=AEClass):
     cover_val_loader = getDataLoader(args, kwargs, train='cover_validation')
     cover_sample_loader = getDataLoader(args, kwargs, train='cover_sample')
 
-    optimizer_cls = torch.optim.Adam(get_optimized_params(mol, 'classifier', lr=args.lr) +
-                                     get_optimized_params(mol, 'small_features', lr=args.lr) +
-                                     get_optimized_params(mol, 'vgg.38', lr=args.lr/5), lr=args.lr)
-    optimizer_d = torch.optim.Adam(get_optimized_params(mol, 'small_features', args.lr) +
+    # optimizer_cls = torch.optim.Adam(get_optimized_params(mol, 'classifier', lr=args.lr) +
+    #                                  get_optimized_params(mol, 'small_features', lr=args.lr) +
+    #                                  get_optimized_params(mol, 'vgg.38', lr=args.lr/5), lr=args.lr)
+    optimizer_d = torch.optim.Adam(([] if args.fea_c == 512 else get_optimized_params(mol, 'small_features', args.lr)) +
                                    get_optimized_params(mol, 'decoder', args.lr) +
                                    get_optimized_params(mol, 'vgg.38', args.lr / 5),
                                    lr=args.lr)
+    optimizer = torch.optim.Adam(([] if args.fea_c == 512 else get_optimized_params(mol, 'small_features', args.lr)) +
+                                 get_optimized_params(mol, 'classifier', lr=args.lr) +
+                                 get_optimized_params(mol, 'decoder', args.lr) +
+                                 get_optimized_params(mol, 'vgg.38', args.lr / 5),
+                                 lr=args.lr)
     loss_decoder = nn.MSELoss()
     loss_class = nn.CrossEntropyLoss(reduction='none').cuda(cuda)
 
@@ -389,38 +398,35 @@ def train(args, mol_short='AEClass_both', main_model=AEClass):
 
             loss1 = loss_decoder(decoded, b_y)
             loss2 = loss_cls_fn(prob_class, label, weights, beta=0.01)
-            # loss = (1-args.alpha) * loss2 + args.alpha * loss1 / 0.01
+            loss = 0
             writer.add_scalar('train/loss_decoder', loss1, cnt)
             writer.add_scalar('train/loss_classifier', loss2, cnt)
             # writer.add_scalar('train/loss', loss, cnt)
 
             if loss2 != 99999:
-                optimizer_d.zero_grad()
-                loss1.backward(retain_graph=True)
-                optimizer_d.step()
+                loss = (1 - args.alpha) * loss2 + args.alpha * loss1
+                optimizer.zero_grad()
+                loss.backward()
+                optimizer.step()
 
-                optimizer_cls.zero_grad()
-                loss2.backward()
-                optimizer_cls.step()
+                _, predicted = torch.max(prob_class.data, 1)
+                predicted = torch.Tensor([predicted[i] for i in range(len(weights)) if weights[i] == 1])
+                label2 = torch.Tensor([label[i] for i in range(len(weights)) if weights[i] == 1])
+                total += predicted.shape[0]
+                correct += (predicted == label2).sum().item()
+
+                prob_class2 = prob_class[[i for i in range(len(weights)) if weights[i] == 1]]
+                top5pre = prob_class2.topk(5, 1, True, True)
+                top5pre = top5pre[1].t()
+                label2 = label2.long().cuda() if cuda else label2.long()
+                top5correct += top5pre.eq(label2.view(1, -1).expand_as(top5pre)).sum().item()
+                writer.add_scalar('train/accuracy', correct / total, cnt)
+                writer.add_scalar('train/top5_accuracy', top5correct / total, cnt)
 
             else:
                 optimizer_d.zero_grad()
                 loss1.backward()
                 optimizer_d.step()
-
-            _, predicted = torch.max(prob_class.data, 1)
-            predicted = torch.Tensor([predicted[i] for i in range(len(weights)) if weights[i]==1])
-            label2 = torch.Tensor([label[i] for i in range(len(weights)) if weights[i]==1])
-            total += predicted.shape[0]
-            correct += (predicted == label2).sum().item()
-
-            prob_class2 = prob_class[[i for i in range(len(weights)) if weights[i]==1]]
-            top5pre = prob_class2.topk(5, 1, True, True)
-            top5pre = top5pre[1].t()
-            label2 = label2.long().cuda() if cuda else label2.long()
-            top5correct += top5pre.eq(label2.view(1, -1).expand_as(top5pre)).sum().item()
-            writer.add_scalar('train/accuracy', correct/total, cnt)
-            writer.add_scalar('train/top5_accuracy', top5correct/total, cnt)
 
             # loss_val = 0.99*loss_val + 0.01*loss.data[0] if loss_val is not None else loss.data[0]
 
@@ -428,11 +434,12 @@ def train(args, mol_short='AEClass_both', main_model=AEClass):
                 if os.path.exists(model_name):
                     shutil.copy2(model_name, model_name.split('.pkl')[0]+'_back.pkl')
                 torch.save(mol, model_name)
+                total_tmp = total if total != 0 else 1
                 print('[Training] Epoch:', epoch, 'Step:', step, '|',
-                      'Time cost %.2f s; Classification error %.6f; Decoder error %.6f; '
+                      'Time cost %.2f s; Classification error %.6f; Decoder error %.6f; Loss %.6f; '
                       'Accuracy %.3f%%; Top5 Accuracy %.3f%%' %
-                      (time.time() - step_time, loss2.data[0], loss1.data[0],
-                       correct*100/total, top5correct*100/total))
+                      (time.time() - step_time, 0.0888 if type(loss2)==int else loss2.data[0], loss1.data[0],
+                       0.0888 if type(loss)==int else loss.data[0], correct*100/total_tmp, top5correct*100/total_tmp))
                 correct, total, top5correct = 0, 0, 0
                 step_time = time.time()
 
