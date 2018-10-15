@@ -412,7 +412,8 @@ def train(args, mol_short='AEClass_both', main_model=AEClass):
             prob_class2 = prob_class[[i for i in range(len(weights)) if weights[i]==1]]
             top5pre = prob_class2.topk(5, 1, True, True)
             top5pre = top5pre[1].t()
-            top5correct += top5pre.eq(label2.long().view(1, -1).expand_as(top5pre)).sum().item()
+            label2 = label2.long().cuda() if cuda else label2.long()
+            top5correct += top5pre.eq(label2.view(1, -1).expand_as(top5pre)).sum().item()
             writer.add_scalar('train/accuracy', correct/total, cnt)
             writer.add_scalar('train/top5_accuracy', top5correct/total, cnt)
 
