@@ -359,7 +359,7 @@ def train(args, mol_short='AEClass_both', main_model=AEClass):
             eval_dir = os.path.join(evaluation_dir, 'epoch%d' % epoch)
             evaluate_cover(cover_loader, cover_sample_loader, mol, cuda, eval_dir, args)
 
-        if epoch >= 0:
+        if epoch > 0:
             # Testing on ImageNet val
             print('######### Testing on ImageNet val Dataset ###########')
             test_loss_decoder, test_loss_cls, test_acc, test_top5acc = test_cls_decoder(test_loader, mol, cuda, 'Full')
