@@ -361,7 +361,7 @@ def evaluate_cover(cover_loader, cover_sample_loader, mol, cuda, save_dir, args,
     encode_features = {'features': np.array(encode_fea), 'labels': labels}
     fc_features = {'features': np.array(fc_fea), 'labels': labels}
 
-    evaluate_cover_by_features(sample_encode_features, encode_features, save_dir, topk, 'encode')
+    # evaluate_cover_by_features(sample_encode_features, encode_features, save_dir, topk, 'encode')
     evaluate_cover_by_features(sample_fc_features, fc_features, save_dir, topk, 'fc', cover_label)
 
     pass

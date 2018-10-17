@@ -57,7 +57,7 @@ class AEClass(torch.nn.Module):
 
     def get_encode_features(self, x):
         fea = self.features(x)
-        fea = self.small_features(fea)
+        fea = self.small_features(fea) if self.encode_channels != 512 else fea
         fea = fea.view(x.size(0), -1)
         return fea
 
