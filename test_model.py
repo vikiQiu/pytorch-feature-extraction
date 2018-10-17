@@ -105,7 +105,7 @@ def train_cls(args):
         mol = torch.load(model_name).to(device)
     else:
         print('Init model ...')
-        mol = ModelCls(args)
+        mol = ModelCls(args).to(device)
 
     ################################################################
     # Prepare Data & Optimizer
