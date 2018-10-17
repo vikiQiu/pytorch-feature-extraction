@@ -354,7 +354,7 @@ def train(args, mol_short='AEClass_both', main_model=AEClass):
     total, correct, top5correct, cnt = 0, 0, 0, 0
     print('Start training ...')
     for epoch in range(args.epoch):
-        if (epoch % 5 == 0): # and epoch != 0:
+        if (epoch % 5 == 0) and epoch != 0:
             # Evaluation on cover data
             mol.eval()
             # eval_dir = os.path.join(evaluation_dir, 'epoch%d' % epoch)
@@ -364,7 +364,7 @@ def train(args, mol_short='AEClass_both', main_model=AEClass):
             print('Fc accuracy:', np.mean(fc_accuracy))
             print('Fc top5 accuracy:', np.mean(fc_top5accuracy))
 
-        if epoch > 0:
+        if epoch >=0: # > 0:
             mol.eval()
             # Testing on ImageNet val
             print('######### Testing on ImageNet val Dataset ###########')
