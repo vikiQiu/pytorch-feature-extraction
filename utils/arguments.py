@@ -9,7 +9,7 @@ def train_args():
     parser.add_argument("--test-dir", type=str, default='..\data\ILSVRC2012\\', help="Test dataset Directory")
     parser.add_argument("--cover-dir", type=str, default='..\data\ILSVRC2012\\', help="Cover dataset Directory")
     parser.add_argument("--model", type=str, default='conv',
-                        help="Dataset to train. Now support ['conv', 'vgg11', 'vgg13', 'vgg16', 'vgg19']."
+                        help="Dataset to train. Now support ['conv', 'vgg11', 'vgg13', 'vgg16', 'vgg19', 'inception']."
                              "'conv' is a simple network with 3 convolution layer."
                              "Decoder have the similar architecture as the encoder.")
     # parser.add_argument("--img-transform", type=str, default='default', help="Image Transformer")
@@ -32,6 +32,8 @@ def train_args():
                         help="Decoder structure. Now support ['vgg', 'simple'].")
     parser.add_argument("--name", type=str, default='',
                         help="model name notification. e.g: '(try)'")
+    parser.add_argument("--main-fn", type=str, default='train',
+                        help="Main function to choose. Differ in different files.")
 
     args = parser.parse_args()
 
