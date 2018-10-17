@@ -1,19 +1,14 @@
 import os
 import torch
 import time
-import json
 import numpy as np
-import torch.utils.data as Data
-import torch.nn.functional as F
 from torch.autograd import Variable
 # import torchsummary
 import torchvision.models as models
 import torch.nn as nn
-from torchvision.utils import save_image
 from data_process import getDataLoader
 from utils.arguments import train_args
-from utils.utils import check_dir_exists, evaluate_cover, evaluate_labeled_data
-from utils.model_inception import inception_v3
+from utils.utils import check_dir_exists, evaluate_labeled_data
 
 
 class ResNet(torch.nn.Module):
