@@ -72,10 +72,8 @@ class AEClass(torch.nn.Module):
         fea = self.get_encode_features(x)
         c = fea
         for name, layer in self.classification._modules.items():
-            if int(name) <= 4:
+            if int(name) <= 5:
                 c = layer(c)
-            if int(name) == 5:
-                c = layer(c, training=False)
         if return_both:
             return fea, c
         else:
