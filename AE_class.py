@@ -13,7 +13,7 @@ import torch.nn as nn
 from torchvision.utils import save_image
 from data_process import getDataLoader
 from utils.arguments import train_args
-from utils.utils import check_dir_exists, evaluate_cover, remove_dir_exists
+from utils.utils import check_dir_exists, evaluate_cover, remove_dir_exists, evaluate_labeled_data
 from model import VGGDecoder, VGG16Feature, SimpleDecoder
 
 
@@ -354,10 +354,17 @@ def train(args, mol_short='AEClass_both', main_model=AEClass):
     total, correct, top5correct, cnt = 0, 0, 0, 0
     print('Start training ...')
     for epoch in range(args.epoch):
-        if (epoch % 5 == 0) and epoch != 0:
+        if (epoch % 5 == 0): # and epoch != 0:
             # Evaluation on cover data
             eval_dir = os.path.join(evaluation_dir, 'epoch%d' % epoch)
-            evaluate_cover(cover_loader, cover_sample_loader, mol, cuda, eval_dir, args)
+            evaluate_cover(cover_val_loader, cover_sample_loader, mol, cuda, eval_dir, args)
+
+            encode_accuracy, encode_top5accuracy, fc_accuracy, fc_top5accuracy = evaluate_labeled_data(test_loader, mol,
+                                                                                                       cuda)
+            print('Encode accuracy:', np.mean(encode_accuracy))
+            print('Encode top5 accuracy:', np.mean(encode_top5accuracy))
+            print('Fc accuracy:', np.mean(fc_accuracy))
+            print('Fc top5 accuracy:', np.mean(fc_top5accuracy))
 
         if epoch > 0:
             # Testing on ImageNet val
