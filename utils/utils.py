@@ -367,19 +367,20 @@ def evaluate_cover(cover_loader, cover_sample_loader, mol, cuda, save_dir, args,
     pass
 
 
-def evaluate_labeled_data(test_loader, mol, cuda):
+def evaluate_labeled_data(test_loader, mol, cuda, both=True):
     print('####### Evaluating Labeld Data ##########')
 
     print('[Feature] Generating Encode and fc ImageNet validation feature')
     encode_fea, fc_fea, labels = generate_features(test_loader, mol, cuda)
     labels = [(x[0], x[1]) for x in labels]
 
-    test_time = time.time()
-    similar_mat = cal_cos(encode_fea)
-    encode_accuracy, _ = cal_accuracy(similar_mat, labels, topk=1)
-    encode_top5accuracy, _ = cal_accuracy(similar_mat, labels, topk=5)
-    print('[Encode Testing] Feature accuracy = %.5f%%; top5 accuracy = %.5f%%; time cost %.2fs'
-          % (np.mean(encode_accuracy) * 100, np.mean(encode_top5accuracy) * 100, time.time() - test_time))
+    if both:
+        test_time = time.time()
+        similar_mat = cal_cos(encode_fea)
+        encode_accuracy, _ = cal_accuracy(similar_mat, labels, topk=1)
+        encode_top5accuracy, _ = cal_accuracy(similar_mat, labels, topk=5)
+        print('[Encode Testing] Feature accuracy = %.5f%%; top5 accuracy = %.5f%%; time cost %.2fs'
+              % (np.mean(encode_accuracy) * 100, np.mean(encode_top5accuracy) * 100, time.time() - test_time))
 
     test_time = time.time()
     similar_mat = cal_cos(fc_fea)
@@ -387,7 +388,11 @@ def evaluate_labeled_data(test_loader, mol, cuda):
     fc_top5accuracy, _ = cal_accuracy(similar_mat, labels, topk=5)
     print('[FC Testing] Feature accuracy = %.5f%%; top5 accuracy = %.5f%%; time cost %.2fs'
           % (np.mean(fc_accuracy) * 100, np.mean(fc_top5accuracy) * 100, time.time() - test_time))
-    return encode_accuracy, encode_top5accuracy, fc_accuracy, fc_top5accuracy
+
+    if both:
+        return encode_accuracy, encode_top5accuracy, fc_accuracy, fc_top5accuracy
+    else:
+        return fc_accuracy, fc_top5accuracy
 
 
 def evaluate_cover_by_features(sample_features, features, save_dir, topk=20, name='encode', cover_label=None):

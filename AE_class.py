@@ -360,7 +360,7 @@ def train(args, mol_short='AEClass_both', main_model=AEClass):
             # evaluate_cover(cover_val_loader, cover_sample_loader, mol, cuda, eval_dir, args)
 
             encode_accuracy, encode_top5accuracy, fc_accuracy, fc_top5accuracy = evaluate_labeled_data(test_loader, mol,
-                                                                                                       cuda)
+                                                                                                       cuda, both=False)
             print('Encode accuracy:', np.mean(encode_accuracy))
             print('Encode top5 accuracy:', np.mean(encode_top5accuracy))
             print('Fc accuracy:', np.mean(fc_accuracy))
