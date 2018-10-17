@@ -181,7 +181,7 @@ class VGG16Classifier(nn.Module):
 
     def get_feature(self, x):
         for name, layer in self.vgg._modules.items():
-            if int(name) <= 3:
+            if int(name) <= 5:
                 x = layer(x)
             else:
                 break
