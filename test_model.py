@@ -172,7 +172,7 @@ def train_cls(args):
                 torch.save(mol, model_name)
                 total_tmp = total if total != 0 else 1
                 print('[Training] Epoch:', epoch, 'Step:', step, '|',
-                      'Time cost %.2f s; Classification error %.6f'
+                      'Time cost %.2f s; Classification error %.6f; '
                       'Accuracy %.3f%%; Top5 Accuracy %.3f%%' %
                       (time.time() - step_time, torch.mean(loss.data), correct * 100 / total_tmp,
                        top5correct * 100 / total_tmp))
