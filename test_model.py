@@ -126,6 +126,7 @@ def train_cls(args):
         # Testing
         ################################################################
         if epoch > 0:
+            mol.eval()
             # Testing on ImageNet val
             print('######### Testing on ImageNet val Dataset ###########')
             test_loss_cls, test_acc, test_top5acc = test_cls(test_loader, mol, cuda, 'Full')
@@ -134,12 +135,14 @@ def train_cls(args):
             writer.add_scalar('test_imagenet/top5accuracy', test_top5acc, epoch)
 
         if epoch % 5 == 4 or epoch == args.epoch-1:
+            mol.eval()
             evaluate_labeled_data(test_loader, mol, cuda)
 
         ################################################################
         # Training
         ################################################################
         step_time = time.time()
+        mol.train()
         for step, (x, y) in enumerate(train_loader):
             b_x = Variable(x).cuda() if cuda else Variable(x)
             label = Variable(torch.Tensor([y[2][i] for i in range(len(y[0]))]).long())
