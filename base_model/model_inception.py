@@ -41,10 +41,23 @@ def inception_v3_features(pretrained=False, **kwargs):
         if 'transform_input' not in kwargs:
             kwargs['transform_input'] = True
         model = Inception3Features(**kwargs)
-        model.load_state_dict(model_zoo.load_url(model_urls['inception_v3_google']))
+        params = model_zoo.load_url(model_urls['inception_v3_google'])
+        del params['fc.bias']
+        del params['fc.weight']
+        model.load_state_dict(params)
         return model
 
     return Inception3Features(**kwargs)
+
+
+class Inception3Class(nn.Module):
+    def __init__(self, num_classes=1000, aux_logits=True, transform_input=False, training=True):
+        super(Inception3Class, self).__init__()
+        self.fc = nn.Linear(2048, num_classes)
+
+    def forward(self, x):
+        x = self.fc(x)
+        return x
 
 
 class Inception3Features(nn.Module):
@@ -71,7 +84,6 @@ class Inception3Features(nn.Module):
         self.Mixed_7a = InceptionD(768)
         self.Mixed_7b = InceptionE(1280)
         self.Mixed_7c = InceptionE(2048)
-        self.fc = nn.Linear(2048, num_classes)
 
         for m in self.modules():
             if isinstance(m, nn.Conv2d) or isinstance(m, nn.Linear):
@@ -131,9 +143,12 @@ class Inception3Features(nn.Module):
         # 8 x 8 x 2048
         x = self.Mixed_7c(x)
         # 8 x 8 x 2048
-        if self.training and self.aux_logits:
-            return x, None
-        return x
+        x = F.avg_pool2d(x, kernel_size=8)
+        fc = F.dropout(x, training=self.training)
+        fc = fc.view(fc.size(0), -1)
+        # if self.training and self.aux_logits:
+        #     return x, None
+        return fc
 
 
 class Inception3(nn.Module):
