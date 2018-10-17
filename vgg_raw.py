@@ -79,9 +79,9 @@ def train():
     vgg.eval()
     check_dir_exists([os.path.join(evaluation_dir, 'cos'), os.path.join(evaluation_dir, 'distance')])
     # evaluate_cover(cover_val_loader, cover_sample_loader, vgg, cuda, evaluation_dir, args)
-    encode_accuracy, encode_top5accuracy, fc_accuracy, fc_top5accuracy = evaluate_labeled_data(test_loader, vgg, cuda)
-    print('Encode accuracy:', np.mean(encode_accuracy))
-    print('Encode top5 accuracy:', np.mean(encode_top5accuracy))
+    fc_accuracy, fc_top5accuracy = evaluate_labeled_data(test_loader, vgg, cuda, both=False)
+    # print('Encode accuracy:', np.mean(encode_accuracy))
+    # print('Encode top5 accuracy:', np.mean(encode_top5accuracy))
     print('Fc accuracy:', np.mean(fc_accuracy))
     print('Fc top5 accuracy:', np.mean(fc_top5accuracy))
 
