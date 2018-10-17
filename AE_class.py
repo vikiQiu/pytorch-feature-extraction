@@ -72,8 +72,10 @@ class AEClass(torch.nn.Module):
         fea = self.get_encode_features(x)
         c = fea
         for name, layer in self.classification._modules.items():
-            if int(name) <= 3:
+            if int(name) <= 4:
                 c = layer(c)
+            if int(name) == 5:
+                c = layer(c, training=False)
         if return_both:
             return fea, c
         else:
@@ -356,17 +358,16 @@ def train(args, mol_short='AEClass_both', main_model=AEClass):
     for epoch in range(args.epoch):
         if (epoch % 5 == 0): # and epoch != 0:
             # Evaluation on cover data
-            eval_dir = os.path.join(evaluation_dir, 'epoch%d' % epoch)
+            mol.eval()
+            # eval_dir = os.path.join(evaluation_dir, 'epoch%d' % epoch)
             # evaluate_cover(cover_val_loader, cover_sample_loader, mol, cuda, eval_dir, args)
 
-            encode_accuracy, encode_top5accuracy, fc_accuracy, fc_top5accuracy = evaluate_labeled_data(test_loader, mol,
-                                                                                                       cuda, both=False)
-            print('Encode accuracy:', np.mean(encode_accuracy))
-            print('Encode top5 accuracy:', np.mean(encode_top5accuracy))
+            fc_accuracy, fc_top5accuracy = evaluate_labeled_data(test_loader, mol, cuda, both=False)
             print('Fc accuracy:', np.mean(fc_accuracy))
             print('Fc top5 accuracy:', np.mean(fc_top5accuracy))
 
         if epoch > 0:
+            mol.eval()
             # Testing on ImageNet val
             print('######### Testing on ImageNet val Dataset ###########')
             test_loss_decoder, test_loss_cls, test_acc, test_top5acc = test_cls_decoder(test_loader, mol, cuda, 'Full')
@@ -389,6 +390,7 @@ def train(args, mol_short='AEClass_both', main_model=AEClass):
             # writer.add_scalar('test_cover/top5accuracy', test_top5acc, epoch)
 
         step_time = time.time()
+        mol.train()
         for step, (x, y) in enumerate(fuse_loader):
             b_x = Variable(x).cuda() if cuda else Variable(x)
             b_y = b_x.detach().cuda() if cuda else b_x.detach()  # batch y, shape (batch, 32*32*3)

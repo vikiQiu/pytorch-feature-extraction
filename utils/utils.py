@@ -370,17 +370,20 @@ def evaluate_cover(cover_loader, cover_sample_loader, mol, cuda, save_dir, args,
 def evaluate_labeled_data(test_loader, mol, cuda, both=True):
     print('####### Evaluating Labeld Data ##########')
 
-    print('[Feature] Generating Encode and fc ImageNet validation feature')
-    encode_fea, fc_fea, labels = generate_features(test_loader, mol, cuda)
-    labels = [(x[0], x[1]) for x in labels]
-
     if both:
+        print('[Feature] Generating Encode and fc ImageNet validation feature')
+        encode_fea, fc_fea, labels = generate_features(test_loader, mol, cuda)
+        labels = [(x[0], x[1]) for x in labels]
         test_time = time.time()
         similar_mat = cal_cos(encode_fea)
         encode_accuracy, _ = cal_accuracy(similar_mat, labels, topk=1)
         encode_top5accuracy, _ = cal_accuracy(similar_mat, labels, topk=5)
         print('[Encode Testing] Feature accuracy = %.5f%%; top5 accuracy = %.5f%%; time cost %.2fs'
               % (np.mean(encode_accuracy) * 100, np.mean(encode_top5accuracy) * 100, time.time() - test_time))
+    else:
+        print('[Feature] Generating fc ImageNet validation feature')
+        fc_fea, labels = generate_features(test_loader, mol, cuda, both)
+        labels = [(x[0], x[1]) for x in labels]
 
     test_time = time.time()
     similar_mat = cal_cos(fc_fea)
@@ -527,7 +530,7 @@ def cal_accuracy(similar_mat, labels, model_name=None, topk=5, asscending=False,
     return accuracy, similar_pic
 
 
-def generate_features(data_loader, mol, cuda):
+def generate_features(data_loader, mol, cuda, both=True):
     fc_features = []
     encode_features = []
     labels = []
@@ -544,7 +547,10 @@ def generate_features(data_loader, mol, cuda):
 
         if step % 10 == 0:
             print('Step %d finished!' % step)
-    return encode_features, fc_features, labels
+    if both:
+        return encode_features, fc_features, labels
+    else:
+        return fc_features, labels
 
 
 def center_fix_size_transform(size):
