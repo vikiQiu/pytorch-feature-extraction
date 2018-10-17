@@ -357,7 +357,7 @@ def train(args, mol_short='AEClass_both', main_model=AEClass):
         if (epoch % 5 == 0): # and epoch != 0:
             # Evaluation on cover data
             eval_dir = os.path.join(evaluation_dir, 'epoch%d' % epoch)
-            evaluate_cover(cover_val_loader, cover_sample_loader, mol, cuda, eval_dir, args)
+            # evaluate_cover(cover_val_loader, cover_sample_loader, mol, cuda, eval_dir, args)
 
             encode_accuracy, encode_top5accuracy, fc_accuracy, fc_top5accuracy = evaluate_labeled_data(test_loader, mol,
                                                                                                        cuda)
