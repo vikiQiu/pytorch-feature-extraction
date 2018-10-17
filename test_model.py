@@ -174,7 +174,7 @@ def train_cls(args):
                 print('[Training] Epoch:', epoch, 'Step:', step, '|',
                       'Time cost %.2f s; Classification error %.6f'
                       'Accuracy %.3f%%; Top5 Accuracy %.3f%%' %
-                      (time.time() - step_time, loss.data[0], correct * 100 / total_tmp,
+                      (time.time() - step_time, torch.mean(loss.data), correct * 100 / total_tmp,
                        top5correct * 100 / total_tmp))
                 correct, total, top5correct = 0, 0, 0
                 step_time = time.time()
