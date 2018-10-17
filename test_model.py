@@ -143,6 +143,7 @@ def train_cls(args):
         ################################################################
         step_time = time.time()
         mol.train()
+        print('######### Training with %d batches total ##########' % len(train_loader))
         for step, (x, y) in enumerate(train_loader):
             b_x = Variable(x).cuda() if cuda else Variable(x)
             label = Variable(torch.Tensor([y[2][i] for i in range(len(y[0]))]).long())
