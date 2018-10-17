@@ -4,6 +4,7 @@ import time
 import shutil
 import torch
 import torch.nn as nn
+from PIL import Image
 from torch.autograd import Variable
 from torchvision.utils import save_image
 import numpy as np
@@ -175,6 +176,43 @@ def update_cover_labels(json_file, label_file):
     return labels
 
 
+def make_judge_file(json_files, label_file, cover_dir, save_dir):
+    '''
+    make file and images to be judged.
+    Compare the label file and
+    :param json_files:
+    :param label_file:
+    :return:
+    '''
+    remove_dir_exists([save_dir])
+    check_dir_exists([save_dir])
+    dat = None
+    for json_file in json_files:
+        with open(json_file) as f:
+            tmp = json.load(f)['cos']
+            tmp = {l: set([ll[0] for ll in tmp[l]]) for l in tmp.keys()}
+        if dat is None:
+            dat = tmp
+        else:
+            dat = {l: dat[l] | tmp[l] for l in dat.keys()}
+    with open(label_file) as f:
+        labels = json.load(f)
+        labels = {l: set(labels[l].keys()) for l in labels}
+
+    not_judge = {l: sorted(list(dat[l] - (dat[l] & labels[l]))) for l in labels}
+    for l in not_judge:
+        files = [os.path.join(cover_dir, 'validation', os.path.basename(ll)) for ll in not_judge[l]]
+        files = [os.path.join(cover_dir, 'samples', os.path.basename(l))]*10 + files
+        save_images(files, save_dir, nrow=10)
+
+    to_judge_json = {l: {'good': [], 'bad': []} for l in not_judge}
+    not_judge = {l: [[x, 0, 0] for x in list(not_judge[l])] for l in not_judge.keys()}
+    with open(os.path.join(save_dir, 'similar_fc.json'), 'w') as f:
+        json.dump(not_judge, f)
+    with open(os.path.join(save_dir, 'to_judge.json'), 'w') as f:
+        json.dump(to_judge_json, f)
+
+
 def judge_cover_labels(json_file, label_file):
     '''
     Judge the cover json file by the label file.
@@ -323,7 +361,7 @@ def evaluate_cover(cover_loader, cover_sample_loader, mol, cuda, save_dir, args,
     encode_features = {'features': np.array(encode_fea), 'labels': labels}
     fc_features = {'features': np.array(fc_fea), 'labels': labels}
 
-    # evaluate_cover_by_features(sample_encode_features, encode_features, save_dir, topk, 'encode')
+    evaluate_cover_by_features(sample_encode_features, encode_features, save_dir, topk, 'encode')
     evaluate_cover_by_features(sample_fc_features, fc_features, save_dir, topk, 'fc', cover_label)
 
     pass
@@ -514,21 +552,30 @@ def center_fix_size_transform(size):
     return trans
 
 
-def save_images(files, pic_dir):
+def save_images(files, pic_dir, nrow=8):
     imgs = []
     for f in files:
         img = Image.open(f).convert('RGB')
         img = center_fix_size_transform(224)(img).numpy().tolist()
         imgs.append(img)
     imgs = torch.Tensor(imgs)
-    save_image(imgs, '%s/%s' % (pic_dir, os.path.basename(files[0])))
+    save_image(imgs, os.path.join(pic_dir, os.path.basename(files[0])), nrow=nrow)
 
 
 if __name__ == '__main__':
+    inception_json = '..\\res\evaluation_pic\Fin\inception_v3_conv-ImageNet1000-val\similar_fc_data.json'
+    vgg_json = '..\\res\evaluation_pic\Fin\\vgg_conv-ImageNet1000-val\similar_fc_data.json'
+    resnet_json = '..\\res\evaluation_pic\Fin\\resnet50_conv-ImageNet1000-val\similar_fc_data.json'
+    vgg_cls_json = '..\\res\evaluation_pic\Fin\\VGGClass_conv32-ImageNet1000-train-sub\epoch20\similar_fc_data.json'
+    label_file = 'E:\work\\feature generation\data\cover\\val_labels.json'
+    cover_dir = 'E:\work\\feature generation\data\cover'
+    eval_pic_dir = 'E:\work\\feature generation\pytorch-feature-extraction\\res\evaluation_pic\judges'
     # prepare_train_data(200)
     # check_cover_data('E:\work\\feature generation\data\cover\images')
     # choose_cover_train('E:\work\\feature generation\data\cover')
     # labels = update_cover_labels('..\\res\evaluation_pic\Fin\inception_v3_conv-ImageNet1000-val\similar_fc_data.json',
     #                              label_file='E:\work\\feature generation\data\cover\\val_labels.json')
-    judge_cover_labels('..\\res\evaluation_pic\Fin\inception_v3_conv-ImageNet1000-val\similar_fc_data.json',
-                                 label_file='E:\work\\feature generation\data\cover\\val_labels.json')
+    # judge_cover_labels('..\\res\evaluation_pic\Fin\inception_v3_conv-ImageNet1000-val\similar_fc_data.json',
+    #                              label_file='E:\work\\feature generation\data\cover\\val_labels.json')
+    make_judge_file([resnet_json, vgg_json, vgg_cls_json],
+                    label_file=label_file, cover_dir=cover_dir, save_dir=eval_pic_dir)
