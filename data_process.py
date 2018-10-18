@@ -74,9 +74,14 @@ def getDataset(args, train='train'):
         data_dir = args.cover_dir
 
     if 'train_subset' in os.path.basename(data_dir):
-        dataset = ImageNetSubTrainDataset(data_dir, img_num_per_label=200,
-                                          img_transform=transformers['crop' + str(args.img_size)],
-                                          loader=loaders[args.img_loader])
+        if train == 'train':
+            dataset = ImageNetSubTrainDataset(data_dir, img_num_per_label=200,
+                                              img_transform=transformers['crop' + str(args.img_size)],
+                                              loader=loaders[args.img_loader])
+        elif train == 'test':
+            dataset = ImageNetSubTrainDataset(data_dir, img_num_per_label=200,
+                                              img_transform=transformers['center_crop' + str(args.img_size)],
+                                              loader=loaders[args.img_loader])
     elif 'cover' in os.path.basename(data_dir):
         if train == 'cover':
             dataset = CoverDataset(os.path.join(data_dir, 'images'),

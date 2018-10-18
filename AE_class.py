@@ -113,8 +113,9 @@ def test_decoder(test_loader, mol, cuda, name):
         _, decoded, _ = mol(x)
 
         loss_decoder = F.mse_loss(decoded, b_y)
-        loss_decoder.backward()
+        # loss_decoder.backward()
         decoders.append(loss_decoder.item())
+        loss_decoder = None
 
         if step % 1 == 0:
             print('[%s Testing] Step: %d | Decoder error %.6f; Time cost %.2f s' %
@@ -145,9 +146,11 @@ def test_cls_decoder(test_loader, mol, cuda, name):
         _, decoded, prob_class = mol(b_x)
         loss_d = loss_decoder_fn(decoded, b_y)
         loss_c = loss_class_fn(prob_class, label)
-        (loss_d + loss_c).backward()
+        # (loss_d + loss_c).backward()
         loss_decoder.append(loss_d.item())
         loss_cls.append(loss_c.item())
+        loss_d = None
+        loss_c = None
 
         _, predicted = torch.max(prob_class.data, 1)
         total += label.size(0)
