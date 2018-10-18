@@ -221,8 +221,8 @@ def train_decoder_only(args, mol_short='AEClass_d', main_model=AEClass):
     for epoch in range(args.epoch):
         if epoch % 5 == (5-1) or epoch == (args.epoch - 1):
             # Evaluation on cover data
-            eval_dir = os.path.join(evaluation_dir, 'epoch%d' % epoch)
-            evaluate_cover(cover_val_loader, cover_sample_loader, mol, cuda, eval_dir)
+            # eval_dir = os.path.join(evaluation_dir, 'epoch%d' % epoch)
+            # evaluate_cover(cover_val_loader, cover_sample_loader, mol, cuda, eval_dir)
 
         if epoch != 0:
             # Testing on Cover val
@@ -357,8 +357,8 @@ def train(args, mol_short='AEClass_both', main_model=AEClass):
         if (epoch % 5 == 0) and epoch != 0:
             # Evaluation on cover data
             mol.eval()
-            # eval_dir = os.path.join(evaluation_dir, 'epoch%d' % epoch)
-            # evaluate_cover(cover_val_loader, cover_sample_loader, mol, cuda, eval_dir, args)
+            eval_dir = os.path.join(evaluation_dir, 'epoch%d' % epoch)
+            evaluate_cover(cover_val_loader, cover_sample_loader, mol, cuda, eval_dir, args)
 
             fc_accuracy, fc_top5accuracy = evaluate_labeled_data(test_loader, mol, cuda, both=False)
             print('Fc accuracy:', np.mean(fc_accuracy))
