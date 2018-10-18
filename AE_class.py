@@ -322,7 +322,7 @@ def train(args, mol_short='AEClass_both', main_model=AEClass):
         mol = main_model(args.fea_c).to(device)
 
     print('Prepare data loader ...')
-    train_loader = getDataLoader(args, kwargs, train='train', p=args.imgnet_p)
+    train_loader = getDataLoader(args, kwargs, train='train')
     fuse_loader = getDataLoader(args, kwargs, train='fuse', p=args.imgnet_p)
     test_loader = getDataLoader(args, kwargs, train='test')
     # small_test_loader = getDataLoader(args, kwargs, train=False, p=10)
