@@ -149,8 +149,8 @@ def test_cls_decoder(test_loader, mol, cuda, name):
         # (loss_d + loss_c).backward()
         loss_decoder.append(loss_d.item())
         loss_cls.append(loss_c.item())
-        loss_d = None
-        loss_c = None
+        # loss_d = None
+        # loss_c = None
 
         _, predicted = torch.max(prob_class.data, 1)
         total += label.size(0)

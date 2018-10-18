@@ -73,15 +73,11 @@ def getDataset(args, train='train'):
     elif 'cover' in train:
         data_dir = args.cover_dir
 
+    transform_type = 'crop' + str(args.img_size) if train == 'train' else 'center_crop' + str(args.img_size)
     if 'train_subset' in os.path.basename(data_dir):
-        if train == 'train':
-            dataset = ImageNetSubTrainDataset(data_dir, img_num_per_label=200,
-                                              img_transform=transformers['crop' + str(args.img_size)],
-                                              loader=loaders[args.img_loader])
-        elif train == 'test':
-            dataset = ImageNetSubTrainDataset(data_dir, img_num_per_label=200,
-                                              img_transform=transformers['center_crop' + str(args.img_size)],
-                                              loader=loaders[args.img_loader])
+        dataset = ImageNetSubTrainDataset(data_dir,
+                                          img_transform=transformers[transform_type],
+                                          loader=loaders[args.img_loader])
     elif 'cover' in os.path.basename(data_dir):
         if train == 'cover':
             dataset = CoverDataset(os.path.join(data_dir, 'images'),
@@ -99,7 +95,7 @@ def getDataset(args, train='train'):
         label_dir = os.path.join(data_dir, 'ILSVRC2012_bbox_val_v3')
         img_dir = os.path.join(data_dir, 'ILSVRC2012_img_val')
         dataset = ImageNetDataset(img_dir, label_dir,
-                                  img_transform=transformers['crop' + str(args.img_size)],
+                                  img_transform=transformers[transform_type],
                                   loader=loaders[args.img_loader])
 
     return dataset
@@ -275,15 +271,14 @@ class ImageNetDataset(Data.Dataset):
 
 class ImageNetSubTrainDataset(Data.Dataset):
     def __init__(self, img_dir,
-                 img_num_per_label=200,
                  img_transform=None,
                  loader=default_loader):
         self.img_dir = img_dir
         self.loader = loader
         self.img_transform = img_transform
-        self.pic_num = 1000*img_num_per_label
-        self.img_num_per_label = img_num_per_label
         self.labels = sorted(os.listdir(img_dir))
+        self.img_num_per_label = len([x for x in os.listdir(os.path.join(img_dir, self.labels[0]))])
+        self.pic_num = 1000*self.img_num_per_label
         self.img_list = {label: sorted([x for x in os.listdir(os.path.join(self.img_dir, label)) if x.endswith('.JPEG')])
                          for label in self.labels}
         self.label_num = len(self.labels)
