@@ -322,11 +322,11 @@ def train(args, mol_short='AEClass_both', main_model=AEClass):
         mol = main_model(args.fea_c).to(device)
 
     print('Prepare data loader ...')
-    train_loader = getDataLoader(args, kwargs, train='train')
+    # train_loader = getDataLoader(args, kwargs, train='train')
     fuse_loader = getDataLoader(args, kwargs, train='fuse', p=args.imgnet_p)
     test_loader = getDataLoader(args, kwargs, train='test')
     # small_test_loader = getDataLoader(args, kwargs, train=False, p=10)
-    cover_loader = getDataLoader(args, kwargs, train='cover')
+    # cover_loader = getDataLoader(args, kwargs, train='cover')
     cover_val_loader = getDataLoader(args, kwargs, train='cover_validation')
     cover_sample_loader = getDataLoader(args, kwargs, train='cover_sample')
 
@@ -368,11 +368,11 @@ def train(args, mol_short='AEClass_both', main_model=AEClass):
             print('Fc accuracy:', np.mean(fc_accuracy))
             print('Fc top5 accuracy:', np.mean(fc_top5accuracy))
 
-        if epoch >= 0:
+        if epoch > 0:
             # mol.eval()
             # Testing on ImageNet val
             print('######### Testing on ImageNet val Dataset ###########')
-            test_loss_decoder, test_loss_cls, test_acc, test_top5acc = test_cls_decoder(train_loader, mol, cuda, 'Full')
+            test_loss_decoder, test_loss_cls, test_acc, test_top5acc = test_cls_decoder(test_loader, mol, cuda, 'Full')
             # test_loss = (1 - args.alpha) * test_loss_cls + args.alpha * test_loss_decoder / 0.001
             writer.add_scalar('test_imagenet/loss_decoder', test_loss_decoder, epoch)
             writer.add_scalar('test_imagenet/loss_classifier', test_loss_cls, epoch)
