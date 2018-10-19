@@ -8,7 +8,58 @@ import torch.nn as nn
 from data_process import getDataLoader
 from utils.arguments import train_args
 from utils.utils import check_dir_exists, evaluate_cover, evaluate_labeled_data
-from base_model.model_inception import inception_v3
+from base_model.model_inception import inception_v3_features, inception_v3
+
+
+def get_main_function(main_fn):
+    if main_fn == 'train':
+        return train
+    elif main_fn == 'get_features':
+        return get_features
+    else:
+        return train
+
+
+def get_features(mol_short='inception_v3'):
+    ################################################################
+    # Arguments
+    ################################################################
+    ae_args = train_args()
+    cuda = ae_args.cuda and torch.cuda.is_available()
+    device = torch.device("cuda" if cuda else "cpu")
+    kwargs = {'num_workers': 1, 'pin_memory': True} if ae_args.cuda else {}
+    # global ae_args, cuda, device, kwargs
+
+    start_time = time.time()
+    args = ae_args
+    model_name = 'model/%s_%s%s_model-%s.pkl' % (
+    mol_short, args.model, '' if args.fea_c is None else args.fea_c, args.dataset)
+    evaluation_dir = 'res/evaluation_pic/%s_%s%s-%s' % (
+    mol_short, args.model, '' if args.fea_c is None else args.fea_c, args.dataset)
+    if os.path.exists(model_name) and args.load_model:
+        print('Loading model ...')
+        mol = torch.load(model_name).to(device)
+    else:
+        print('Init model ...')
+        mol = inception_v3_features(pretrained=True, training=False).to(device)
+
+    # train_loader = getDataLoader(args, kwargs)
+    test_loader = getDataLoader(args, kwargs, train='test')
+
+    check_dir_exists(['res/', 'model', 'res/evaluation_pic', evaluation_dir])
+    t_per_img = []
+    for epoch in range(1):
+        step_time = time.time()
+        for step, (x, y) in enumerate(test_loader):
+            b_x = Variable(x, volatile=True).cuda() if cuda else Variable(x)
+
+            t0 = time.time()
+            features = mol(b_x)
+            t_tmp = (time.time() - t0) / len(b_x) * 1000
+            t_per_img.append(t_tmp)
+            print('cost %.6fms per image this batch. cost %.6fms per image till now.' % (t_tmp, np.mean(sorted(t_per_img)[1:-1])))
+
+    print('Finished. Totally cost %.2f' % (time.time() - start_time))
 
 
 def train(mol_short='inception_v3'):
@@ -83,4 +134,5 @@ def train(mol_short='inception_v3'):
 
 
 if __name__ == '__main__':
-    train()
+    args = train_args()
+    get_main_function(args.main_fn)()
