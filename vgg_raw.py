@@ -75,15 +75,15 @@ def train():
 
     check_dir_exists(['res/', 'model', 'res/evaluation_pic', evaluation_dir])
 
-    # Evaluation
-    vgg.eval()
-    check_dir_exists([os.path.join(evaluation_dir, 'cos'), os.path.join(evaluation_dir, 'distance')])
-    # evaluate_cover(cover_val_loader, cover_sample_loader, vgg, cuda, evaluation_dir, args)
-    fc_accuracy, fc_top5accuracy = evaluate_labeled_data(test_loader, vgg, cuda, both=False)
-    # print('Encode accuracy:', np.mean(encode_accuracy))
-    # print('Encode top5 accuracy:', np.mean(encode_top5accuracy))
-    print('Fc accuracy:', np.mean(fc_accuracy))
-    print('Fc top5 accuracy:', np.mean(fc_top5accuracy))
+    # # Evaluation
+    # vgg.eval()
+    # check_dir_exists([os.path.join(evaluation_dir, 'cos'), os.path.join(evaluation_dir, 'distance')])
+    # # evaluate_cover(cover_val_loader, cover_sample_loader, vgg, cuda, evaluation_dir, args)
+    # fc_accuracy, fc_top5accuracy = evaluate_labeled_data(test_loader, vgg, cuda, both=False)
+    # # print('Encode accuracy:', np.mean(encode_accuracy))
+    # # print('Encode top5 accuracy:', np.mean(encode_top5accuracy))
+    # print('Fc accuracy:', np.mean(fc_accuracy))
+    # print('Fc top5 accuracy:', np.mean(fc_top5accuracy))
 
     total, correct, top5correct, loss_total = 0, 0, 0, 0
     for epoch in range(1):
@@ -93,7 +93,9 @@ def train():
             label = Variable(torch.Tensor([y[2][i] for i in range(len(y[0]))]).long())
             label = label.cuda() if cuda else label
 
+            t0 = time.time()
             prob_class = vgg(b_x)
+            print('cost %.3fs' %((time.time() - t0)/len(b_x)))
 
             loss = loss_class(prob_class, label) # mean square error
             # optimizer.zero_grad()  # clear gradients for this training step
@@ -114,8 +116,10 @@ def train():
                 print('Epoch:', epoch, 'Step:', step, '|',
                       'test loss %.6f; Time cost %.2f s; Classification error %.6f; '
                       'Top1 Accuracy %.3f; Top5 Accuracy %.3f' %
-                      (loss_total/total, time.time() - step_time, loss, correct*100/total, top5correct*100/total))
+                      (loss_total/total, time.time() - step_time, loss.item(), correct*100/total, top5correct*100/total))
                 step_time = time.time()
+
+            loss = None 
     print('Finished. Totally cost %.2f' % (time.time() - start_time))
 
 
