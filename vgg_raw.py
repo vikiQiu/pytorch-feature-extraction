@@ -86,6 +86,7 @@ def train():
     # print('Fc top5 accuracy:', np.mean(fc_top5accuracy))
 
     total, correct, top5correct, loss_total = 0, 0, 0, 0
+    t_per_img = []
     for epoch in range(1):
         step_time = time.time()
         for step, (x, y) in enumerate(test_loader):
@@ -95,7 +96,9 @@ def train():
 
             t0 = time.time()
             prob_class = vgg(b_x)
-            print('cost %.3fs' %((time.time() - t0)/len(b_x)))
+            t_tmp = (time.time() - t0)/len(b_x)*1000
+            t_per_img.append(t_tmp)
+            print('cost %.6fms per image this batch. cost %.6fms per image till now.' % (t_tmp, np.mean(t_per_img)))
 
             loss = loss_class(prob_class, label) # mean square error
             # optimizer.zero_grad()  # clear gradients for this training step
@@ -119,7 +122,7 @@ def train():
                       (loss_total/total, time.time() - step_time, loss.item(), correct*100/total, top5correct*100/total))
                 step_time = time.time()
 
-            loss = None 
+            loss = None
     print('Finished. Totally cost %.2f' % (time.time() - start_time))
 
 
