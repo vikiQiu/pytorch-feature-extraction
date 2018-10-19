@@ -98,7 +98,8 @@ def train():
             prob_class = vgg(b_x)
             t_tmp = (time.time() - t0)/len(b_x)*1000
             t_per_img.append(t_tmp)
-            print('cost %.6fms per image this batch. cost %.6fms per image till now.' % (t_tmp, np.mean(t_per_img)))
+            print('cost %.6fms per image this batch. cost %.6fms per image till now.' % (
+                t_tmp, np.mean(sorted(t_per_img)[1:-1])))
 
             loss = loss_class(prob_class, label) # mean square error
             # optimizer.zero_grad()  # clear gradients for this training step
