@@ -369,7 +369,7 @@ def train(args, mol_short='AEClass_both', main_model=AEClass):
             print('Fc top5 accuracy:', np.mean(fc_top5accuracy))
 
         if epoch > 0:
-            # mol.eval()
+            mol.eval()
             # Testing on ImageNet val
             print('######### Testing on ImageNet val Dataset ###########')
             test_loss_decoder, test_loss_cls, test_acc, test_top5acc = test_cls_decoder(test_loader, mol, cuda, 'Full')
