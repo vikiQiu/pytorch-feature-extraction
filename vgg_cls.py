@@ -22,13 +22,14 @@ class VGGClass(torch.nn.Module):
 
         self.encode_channels = encode_channels
         self.features = VGG16Feature()
-        self.small_features = nn.Sequential(
-            nn.Conv2d(512, 128, kernel_size=1),
-            nn.BatchNorm2d(128),
-            nn.ReLU(inplace=True),
-            nn.Conv2d(128, encode_channels, kernel_size=1),
-            nn.BatchNorm2d(encode_channels),
-        )
+        if encode_channels != 512:
+            self.small_features = nn.Sequential(
+                nn.Conv2d(512, 128, kernel_size=1),
+                nn.BatchNorm2d(128),
+                nn.ReLU(inplace=True),
+                nn.Conv2d(128, encode_channels, kernel_size=1),
+                nn.BatchNorm2d(encode_channels),
+            )
         self.classification = nn.Sequential(
             nn.Linear(encode_channels * 7 * 7, 1024),
             nn.ReLU(inplace=True),
@@ -46,7 +47,7 @@ class VGGClass(torch.nn.Module):
 
     def get_encode_features(self, x):
         fea = self.features(x)
-        fea = self.small_features(fea)
+        fea = self.small_features(fea) if self.encode_channels != 512 else fea
         fea = fea.view(x.size(0), -1)
         return fea
 
@@ -82,6 +83,7 @@ def train(mol_short='VGGClass', main_model=VGGClass):
 
     start_time = time.time()
     model_name = 'model/%s_%s%s_model-%s.pkl' % (mol_short, args.model, '' if args.fea_c is None else args.fea_c, args.dataset)
+    print('[Model] model name is', model_name)
     pic_dir = 'res/%s_%s%s-%s/' % (mol_short, args.model, '' if args.fea_c is None else args.fea_c, args.dataset)
     evaluation_dir = 'res/evaluation_pic/%s_%s%s-%s' % (mol_short, args.model, '' if args.fea_c is None else args.fea_c, args.dataset)
     if os.path.exists(model_name) and args.load_model:
@@ -95,7 +97,7 @@ def train(mol_short='VGGClass', main_model=VGGClass):
         mol = main_model(args.fea_c).to(device)
 
     print('Prepare data loader ...')
-    train_loader = getDataLoader(args, kwargs)
+    train_loader = getDataLoader(args, kwargs, p=args.imgnet_p)
     test_loader = getDataLoader(args, kwargs, train='test')
     # small_test_loader = getDataLoader(args, kwargs, train=False, p=10)
     # cover_loader = getDataLoader(args, kwargs, train='cover')
@@ -103,8 +105,12 @@ def train(mol_short='VGGClass', main_model=VGGClass):
     cover_sample_loader = getDataLoader(args, kwargs, train='cover_sample')
 
     # Optimizer & Loss function
-    optimizer1 = torch.optim.Adam(list(mol.classification.parameters())+list(mol.small_features.parameters()),
-                                  lr=args.lr)
+    if args.fea_c == 512:
+        optimizer1 = torch.optim.Adam(list(mol.classification.parameters()), lr=args.lr)
+    else:
+        optimizer1 = torch.optim.Adam(list(mol.classification.parameters()) + list(mol.small_features.parameters()),
+                                      lr=args.lr)
+
     loss_class = nn.CrossEntropyLoss().cuda(cuda)
     loss_val = None
 
@@ -115,7 +121,7 @@ def train(mol_short='VGGClass', main_model=VGGClass):
     print('Start training ...')
     for epoch in range(args.epoch):
         # Evaluation cover
-        if epoch % 5 == 0:
+        if epoch % 5 == 0 and epoch != 0:
             eval_dir = os.path.join(evaluation_dir, 'epoch%d' % epoch)
             evaluate_cover(cover_val_loader, cover_sample_loader, mol, cuda, eval_dir, args)
 
@@ -125,10 +131,11 @@ def train(mol_short='VGGClass', main_model=VGGClass):
             writer.add_scalar('test/fc_feature_accuracy', np.mean(fc_accuracy), epoch)
             writer.add_scalar('test/fc_feature_top5accuracy', np.mean(fc_top5accuracy), epoch)
 
-        # Testing classifier
-        test_acc, test_top5acc = test(test_loader, mol, cuda, 'Full')
-        writer.add_scalar('test/class_accuracy', test_acc, epoch)
-        writer.add_scalar('test/class_top5accuracy', test_top5acc, epoch)
+        if epoch != 0:
+            # Testing classifier
+            test_acc, test_top5acc = test(test_loader, mol, cuda, 'Full')
+            writer.add_scalar('test/class_accuracy', test_acc, epoch)
+            writer.add_scalar('test/class_top5accuracy', test_top5acc, epoch)
 
         step_time = time.time()
         print('######### Training with %d batches total ##########' % len(train_loader))
