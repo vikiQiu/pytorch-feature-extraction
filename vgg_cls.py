@@ -76,6 +76,7 @@ def train(mol_short='VGGClass', main_model=VGGClass):
     kwargs = {'num_workers': 1, 'pin_memory': True} if ae_args.cuda else {}
     # global ae_args, cuda, device, kwargs
     args = ae_args
+    mol_short = mol_short if args.name == '' else mol_short+'_'+args.name
 
     log_dir = 'log/log_%s_%s%s_model-%s/' %\
               (mol_short, args.model, '' if args.fea_c is None else args.fea_c, args.dataset)
