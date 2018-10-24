@@ -123,6 +123,7 @@ def train(mol_short='VGGClass', main_model=VGGClass):
     for epoch in range(args.epoch):
         # Evaluation cover
         if epoch % 5 == 0 and epoch != 0:
+            mol.eval()
             eval_dir = os.path.join(evaluation_dir, 'epoch%d' % epoch)
             evaluate_cover(cover_val_loader, cover_sample_loader, mol, cuda, eval_dir, args)
 
@@ -134,11 +135,13 @@ def train(mol_short='VGGClass', main_model=VGGClass):
 
         if epoch != 0:
             # Testing classifier
+            mol.eval()
             test_acc, test_top5acc = test(test_loader, mol, cuda, 'Full')
             writer.add_scalar('test/class_accuracy', test_acc, epoch)
             writer.add_scalar('test/class_top5accuracy', test_top5acc, epoch)
 
         step_time = time.time()
+        mol.train()
         print('######### Training with %d batches total ##########' % len(train_loader))
         for step, (x, y) in enumerate(train_loader):
             b_x = Variable(x).cuda() if cuda else Variable(x)

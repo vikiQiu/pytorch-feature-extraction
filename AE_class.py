@@ -368,7 +368,7 @@ def train(args, mol_short='AEClass_both', main_model=AEClass):
             print('Fc accuracy:', np.mean(fc_accuracy))
             print('Fc top5 accuracy:', np.mean(fc_top5accuracy))
 
-        if epoch > 0:
+        if epoch >= 0:
             mol.eval()
             # Testing on ImageNet val
             print('######### Testing on ImageNet val Dataset ###########')
