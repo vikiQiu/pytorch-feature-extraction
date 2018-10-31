@@ -213,6 +213,26 @@ def make_judge_file(json_files, label_file, cover_dir, save_dir):
         json.dump(to_judge_json, f)
 
 
+def generate_judge_criteria(cover_dir, save_dir):
+    '''
+    Generate the judge critieria json
+    {sample cover name: {
+        'good': what is good?
+        'bad': what is bad?
+        }
+    }
+    :param cover_dir: the sample cover directory
+    :param save_dir: directory to save the json
+    :return:
+    '''
+    files = os.listdir(cover_dir)
+    out = {}
+    for f in files:
+        out[f] = {'good': '', 'ok': '', 'bad': ''}
+    with open(os.path.join(save_dir, 'judge_criteria.json'), 'w') as f:
+        json.dump(out, f)
+
+
 def judge_cover_labels(json_file, label_file):
     '''
     Judge the cover json file by the label file.
@@ -563,6 +583,19 @@ def center_fix_size_transform(size):
     return trans
 
 
+def read_imagenet_label_name(dir_name):
+    '''
+    Get <label_idx: label_name> directory
+    :param dir_name: the ImageNet directory
+    :return:
+    '''
+    json_name = os.path.join(dir_name, 'name_label.json')
+    with open(json_name) as f:
+        res = json.load(f)
+    res = {int(x): res[x] for x in res.keys()}
+    return res
+
+
 def save_images(files, pic_dir, nrow=8):
     imgs = []
     for f in files:
@@ -588,5 +621,6 @@ if __name__ == '__main__':
     #                              label_file='E:\work\\feature generation\data\cover\\val_labels.json')
     # judge_cover_labels('..\\res\evaluation_pic\Fin\inception_v3_conv-ImageNet1000-val\similar_fc_data.json',
     #                              label_file='E:\work\\feature generation\data\cover\\val_labels.json')
-    make_judge_file([resnet_json, vgg_json, vgg_cls_json],
-                    label_file=label_file, cover_dir=cover_dir, save_dir=eval_pic_dir)
+    # make_judge_file([resnet_json, vgg_json, vgg_cls_json],
+    #                     label_file=label_file, cover_dir=cover_dir, save_dir=eval_pic_dir)
+    generate_judge_criteria(os.path.join(cover_dir, 'samples'), eval_pic_dir)

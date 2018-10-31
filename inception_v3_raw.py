@@ -1,13 +1,14 @@
 import os
 import torch
 import time
+import json
 import numpy as np
 from torch.autograd import Variable
 # import torchsummary
 import torch.nn as nn
 from data_process import getDataLoader
 from utils.arguments import train_args
-from utils.utils import check_dir_exists, evaluate_cover, evaluate_labeled_data
+from utils.utils import check_dir_exists, evaluate_cover, evaluate_labeled_data, read_imagenet_label_name
 from base_model.model_inception import inception_v3_features, inception_v3
 
 
@@ -16,6 +17,8 @@ def get_main_function(main_fn):
         return train
     elif main_fn == 'get_features':
         return get_features
+    elif main_fn == 'cover_label':
+        return sample_cover_label
     else:
         return train
 
@@ -131,6 +134,41 @@ def train(mol_short='inception_v3'):
                       (loss_total/total, time.time() - step_time, loss, correct*100/total, top5correct*100/total))
                 step_time = time.time()
     print('Finished. Totally cost %.2f' % (time.time() - start_time))
+
+
+def sample_cover_label(mol_short='inception_v3'):
+
+    ################################################################
+    # Arguments
+    ################################################################
+    args = train_args()
+    cuda = args.cuda and torch.cuda.is_available()
+    device = torch.device("cuda" if cuda else "cpu")
+    kwargs = {'num_workers': 1, 'pin_memory': True} if args.cuda else {}
+
+    start_time = time.time()
+    out_path = 'res/evaluation_pic/sample_cover_label_%s.json' % mol_short
+    print('Init model ...')
+    mol = inception_v3(pretrained=True, training=False).to(device)
+    cover_sample_loader = getDataLoader(args, kwargs, train='cover_sample')
+    labels = read_imagenet_label_name(os.path.dirname(args.dataset_dir))
+
+    mol.eval()
+    out = {}
+    for step, (x, y) in enumerate(cover_sample_loader):
+        x = x.cuda() if cuda else x
+        label = [y[1][i] for i in range(len(y[0]))]
+
+        prob_class = mol(x)
+        top5pre = prob_class.topk(10, 1, True, True)
+        top5pre_label = top5pre[1].tolist()
+        top5pre_prob = top5pre[0].tolist()
+        for i in range(len(label)):
+            out[label[i]] = [[labels[top5pre_label[i][j]], top5pre_label[i][j], top5pre_prob[i][j]] for j in range(len(top5pre_prob[i]))]
+    out = {k: out[k] for k in sorted(out.keys())}
+    print(out)
+    with open(out_path, 'w') as f:
+        json.dump(out, f)
 
 
 if __name__ == '__main__':
