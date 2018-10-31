@@ -14,7 +14,7 @@ from utils.utils import check_dir_exists, evaluate_labeled_data
 class ResNet(torch.nn.Module):
     def __init__(self):
         super(ResNet, self).__init__()
-        mol = models.resnet50(pretrained=True)
+        mol = models.resnet101(pretrained=True)
 
         self.features = nn.Sequential(*list(mol.children())[:-2])
         self.avg_pool = list(mol.children())[-2]
@@ -40,6 +40,57 @@ class ResNet(torch.nn.Module):
             return fc, fc
         else:
             return fc
+
+
+def get_main_function(main_fn):
+    if main_fn == 'train':
+        return train
+    elif main_fn == 'get_features':
+        return get_features
+    else:
+        return train
+
+
+def get_features(mol_short='resnet50'):
+    ################################################################
+    # Arguments
+    ################################################################
+    ae_args = train_args()
+    cuda = ae_args.cuda and torch.cuda.is_available()
+    device = torch.device("cuda" if cuda else "cpu")
+    kwargs = {'num_workers': 1, 'pin_memory': True} if ae_args.cuda else {}
+    # global ae_args, cuda, device, kwargs
+
+    start_time = time.time()
+    args = ae_args
+    model_name = 'model/%s_%s%s_model-%s.pkl' % (
+        mol_short, args.model, '' if args.fea_c is None else args.fea_c, args.dataset)
+    evaluation_dir = 'res/evaluation_pic/%s_%s%s-%s' % (
+        mol_short, args.model, '' if args.fea_c is None else args.fea_c, args.dataset)
+    if os.path.exists(model_name) and args.load_model:
+        print('Loading model ...')
+        mol = torch.load(model_name).to(device)
+    else:
+        print('Init model ...')
+        mol = ResNet().to(device)
+
+    test_loader = getDataLoader(args, kwargs, train='test')
+    loss_class = nn.CrossEntropyLoss().cuda(cuda)
+
+    check_dir_exists(['res/', 'model', 'res/evaluation_pic', evaluation_dir])
+
+    total, correct, top5correct, loss_total = 0, 0, 0, 0
+    t_per_img = []
+    for epoch in range(1):
+        step_time = time.time()
+        for step, (x, y) in enumerate(test_loader):
+            t0 = time.time()
+            b_x = Variable(x, volatile=True).cuda() if cuda else Variable(x)
+            prob_class = mol.get_fc_features(b_x, return_both=False)
+            t_tmp = (time.time() - t0) / len(b_x) * 1000
+            t_per_img.append(t_tmp)
+            print('cost %.6fms per image this batch. cost %.6fms per image till now.' % (
+                t_tmp, np.mean(sorted(t_per_img)[1:-1])))
 
 
 def train(mol_short='resnet50'):
@@ -114,4 +165,5 @@ def train(mol_short='resnet50'):
 
 
 if __name__ == '__main__':
-    train()
+    args = train_args()
+    get_main_function(args.main_fn)()
