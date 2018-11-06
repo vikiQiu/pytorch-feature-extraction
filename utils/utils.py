@@ -156,6 +156,10 @@ def update_cover_labels(json_file, label_file):
             bad = judges[sample]['bad']
             ok = set(range(len(dat[sample]))) - set(good) - set(bad)
             for ind in good:
+                # print(sample,ind)
+                # print(dat[sample])
+                # print(dat[sample][ind])
+                # print(dat[sample][ind][0])
                 labels[sample][dat[sample][ind][0]] = 2
             for ind in ok:
                 labels[sample][dat[sample][ind][0]] = 1
@@ -623,4 +627,10 @@ if __name__ == '__main__':
     #                              label_file='E:\work\\feature generation\data\cover\\val_labels.json')
     # make_judge_file([resnet_json, vgg_json, vgg_cls_json],
     #                     label_file=label_file, cover_dir=cover_dir, save_dir=eval_pic_dir)
-    generate_judge_criteria(os.path.join(cover_dir, 'samples'), eval_pic_dir)
+    # generate_judge_criteria(os.path.join(cover_dir, 'samples'), eval_pic_dir)
+
+    # add new judged labels
+    # labels = update_cover_labels('..\\res\evaluation_pic\judges\similar_fc.json',
+    #                              label_file='E:\work\\feature generation\data\cover\\val_labels.json')
+    judge_cover_labels(vgg_cls_json,
+                                 label_file='E:\work\\feature generation\data\cover\\val_labels.json')
