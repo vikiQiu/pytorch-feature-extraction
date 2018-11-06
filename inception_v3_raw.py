@@ -85,7 +85,7 @@ def train(mol_short='inception_v3'):
     else:
         print('Init model ...')
         mol = inception_v3(pretrained=True, training=False).to(device)
-    mol.eval()
+    # mol.eval()
 
     # train_loader = getDataLoader(args, kwargs)
     test_loader = getDataLoader(args, kwargs, train='test')
