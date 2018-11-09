@@ -378,7 +378,7 @@ def evaluate_cover(cover_loader, cover_sample_loader, mol, cuda, save_dir, args,
     else:
         cover_label = {os.path.basename(x[1]): {} for x in labels}
 
-    print(cover_label, len(cover_label))
+    # print(cover_label, len(cover_label))
 
     print('[Feature] Generating Encode and fc Cover feature')
     encode_fea, fc_fea, labels = generate_features(cover_loader, mol, cuda)
