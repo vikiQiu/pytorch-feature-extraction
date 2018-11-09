@@ -99,7 +99,7 @@ def train(mol_short='inception_v3'):
 
     # Evaluation
     # check_dir_exists([os.path.join(evaluation_dir, 'cos'), os.path.join(evaluation_dir, 'distance')])
-    evaluate_cover(cover_sample_loader, cover_sample_loader, mol, cuda, evaluation_dir, args)
+    evaluate_cover(cover_sample_loader, cover_val_loader, mol, cuda, evaluation_dir, args)
     # encode_accuracy, encode_top5accuracy, fc_accuracy, fc_top5accuracy = evaluate_labeled_data(test_loader, mol, cuda)
     # print('Encode accuracy:', np.mean(encode_accuracy))
     # print('Encode top5 accuracy:', np.mean(encode_top5accuracy))
