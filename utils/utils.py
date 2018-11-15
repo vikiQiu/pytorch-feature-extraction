@@ -153,15 +153,17 @@ def update_cover_labels(json_file, label_file):
             judges = json.load(f)
         for sample in list(judges.keys()):
             good = judges[sample]['good']
-            bad = judges[sample]['bad']
-            ok = set(range(len(dat[sample]))) - set(good) - set(bad)
+            # bad = judges[sample]['bad']
+            # ok = set(range(len(dat[sample]))) - set(good) - set(bad)
+            ok = judges[sample]['ok']
+            bad = set(range(len(dat[sample]))) - set(good) - set(ok)
             for ind in good:
-                # print(sample,ind)
-                # print(dat[sample])
-                # print(dat[sample][ind])
-                # print(dat[sample][ind][0])
                 labels[sample][dat[sample][ind][0]] = 2
             for ind in ok:
+                print(sample,ind)
+                print(dat[sample])
+                print(dat[sample][ind])
+                print(dat[sample][ind][0])
                 labels[sample][dat[sample][ind][0]] = 1
             for ind in bad:
                 labels[sample][dat[sample][ind][0]] = -1
@@ -180,7 +182,7 @@ def update_cover_labels(json_file, label_file):
     return labels
 
 
-def make_judge_file(json_files, label_file, cover_dir, save_dir):
+def make_judge_file(json_files, label_file, cover_dir, save_dir, topk=23):
     '''
     make file and images to be judged.
     Compare the label file and
@@ -194,7 +196,7 @@ def make_judge_file(json_files, label_file, cover_dir, save_dir):
     for json_file in json_files:
         with open(json_file) as f:
             tmp = json.load(f)['cos']
-            tmp = {l: set([ll[0] for ll in tmp[l]]) for l in tmp.keys()}
+            tmp = {l: set([ll[0] for ll in tmp[l][:topk]]) for l in tmp.keys()}
         if dat is None:
             dat = tmp
         else:
@@ -209,7 +211,7 @@ def make_judge_file(json_files, label_file, cover_dir, save_dir):
         files = [os.path.join(cover_dir, 'samples', os.path.basename(l))]*10 + files
         save_images(files, save_dir, nrow=10)
 
-    to_judge_json = {l: {'good': [], 'bad': []} for l in not_judge}
+    to_judge_json = {l: {'good': [], 'ok': []} for l in not_judge}
     not_judge = {l: [[x, 0, 0] for x in list(not_judge[l])] for l in not_judge.keys()}
     with open(os.path.join(save_dir, 'similar_fc.json'), 'w') as f:
         json.dump(not_judge, f)
@@ -251,16 +253,16 @@ def judge_cover_labels(json_file, label_file):
 
     cos_top1_accuracy = []
     cos_top5_accuracy = []
-    cos_top10_accuracy = []
+    # cos_top10_accuracy = []
     for s_img in dat.keys():
-        judges = [labels[s_img][l[0]] for l in dat[s_img]]
+        judges = [labels[s_img][l[0]] for l in dat[s_img][:5]]
         cos_top1_accuracy.append(judges[0])
         cos_top5_accuracy.extend(judges[:5])
-        cos_top10_accuracy.extend(judges[:10])
+        # cos_top10_accuracy.extend(judges[:10])
 
     cos_top1_accuracy = np.array(cos_top1_accuracy)
     cos_top5_accuracy = np.array(cos_top5_accuracy)
-    cos_top10_accuracy = np.array(cos_top10_accuracy)
+    # cos_top10_accuracy = np.array(cos_top10_accuracy)
     print('[Result] Accuracy of cover features:')
     print('[Top1 cos] NOT BAD accuracy = %.4f; GOOD accuracy = %.4f; BAD accuracy = %.4f; NOT SURE rate = %.4f'
           % (np.mean(cos_top1_accuracy > 0), np.mean(cos_top1_accuracy == 2),
@@ -268,9 +270,9 @@ def judge_cover_labels(json_file, label_file):
     print('[Top5 cos] NOT BAD accuracy = %.4f; GOOD accuracy = %.4f; BAD accuracy = %.4f; NOT SURE rate = %.4f'
           % (np.mean(cos_top5_accuracy > 0), np.mean(cos_top5_accuracy == 2),
              np.mean(cos_top5_accuracy == -1), np.mean(cos_top5_accuracy == 0)))
-    print('[Top10 cos] NOT BAD accuracy = %.4f; GOOD accuracy = %.4f; BAD accuracy = %.4f; NOT SURE rate = %.4f'
-          % (np.mean(cos_top10_accuracy > 0), np.mean(cos_top10_accuracy == 2),
-             np.mean(cos_top10_accuracy == -1), np.mean(cos_top10_accuracy == 0)))
+    # print('[Top10 cos] NOT BAD accuracy = %.4f; GOOD accuracy = %.4f; BAD accuracy = %.4f; NOT SURE rate = %.4f'
+    #       % (np.mean(cos_top10_accuracy > 0), np.mean(cos_top10_accuracy == 2),
+    #          np.mean(cos_top10_accuracy == -1), np.mean(cos_top10_accuracy == 0)))
 
 
 def check_train_data(pic_num):
@@ -618,6 +620,9 @@ if __name__ == '__main__':
     label_file = 'E:\work\\feature generation\data\cover\\val_labels.json'
     cover_dir = 'E:\work\\feature generation\data\cover'
     eval_pic_dir = 'E:\work\\feature generation\pytorch-feature-extraction\\res\evaluation_pic\judges'
+    aeclass1017_json = 'E:\work\\feature generation\pytorch-feature-extraction\\res\evaluation_pic\\20181018\AEClass_both_conv512-ImageNet1000-train-sub\epoch0\similar_fc_data.json'
+    vggbase_all_json = 'E:\work\\feature generation\pytorch-feature-extraction\\res\evaluation_pic\\20181024\VGGClass_all_conv512-ImageNet1000-train-sub\epoch0\similar_fc_data.json'
+    vggbase_json = 'E:\work\\feature generation\pytorch-feature-extraction\\res\evaluation_pic\\20181024\VGGClass_conv512-ImageNet1000-train-sub\epoch15\similar_fc_data.json'
     # prepare_train_data(200)
     # check_cover_data('E:\work\\feature generation\data\cover\images')
     # choose_cover_train('E:\work\\feature generation\data\cover')
@@ -625,12 +630,12 @@ if __name__ == '__main__':
     #                              label_file='E:\work\\feature generation\data\cover\\val_labels.json')
     # judge_cover_labels('..\\res\evaluation_pic\Fin\inception_v3_conv-ImageNet1000-val\similar_fc_data.json',
     #                              label_file='E:\work\\feature generation\data\cover\\val_labels.json')
-    # make_judge_file([resnet_json, vgg_json, vgg_cls_json],
-    #                     label_file=label_file, cover_dir=cover_dir, save_dir=eval_pic_dir)
+    # make_judge_file([aeclass1017_json, vggbase_all_json, vgg_json],
+    #                     label_file=label_file, cover_dir=cover_dir, save_dir=eval_pic_dir, topk=5)
     # generate_judge_criteria(os.path.join(cover_dir, 'samples'), eval_pic_dir)
 
     # add new judged labels
     # labels = update_cover_labels('..\\res\evaluation_pic\judges\similar_fc.json',
     #                              label_file='E:\work\\feature generation\data\cover\\val_labels.json')
-    judge_cover_labels(vgg_cls_json,
-                                 label_file='E:\work\\feature generation\data\cover\\val_labels.json')
+    judge_cover_labels(vggbase_json,
+                       label_file='E:\work\\feature generation\data\cover\\val_labels.json')
