@@ -29,7 +29,7 @@ def train_args():
                         help="The percentage of ImageNet train dataset to train the classifier."
                              "If 0, only train the decoder.")
     parser.add_argument("--decoder", type=str, default='vgg',
-                        help="Decoder structure. Now support ['vgg', 'simple'].")
+                        help="Decoder structure. Now support ['vgg', 'simple', 'vgg2'].")
     parser.add_argument("--name", type=str, default='',
                         help="model name notification. e.g: '(try)'")
     parser.add_argument("--main-fn", type=str, default='train',

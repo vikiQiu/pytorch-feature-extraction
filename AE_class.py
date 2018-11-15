@@ -33,6 +33,10 @@ class AEClass(torch.nn.Module):
             )
         if decoder == 'vgg':
             self.decoder = VGGDecoder(model='vgg16', out_channels=encode_channels)
+        elif decoder == 'vgg2':
+            self.decoder = VGGDecoder(model='vgg16_2', out_channels=encode_channels)
+        elif decoder == 'simple2':
+            self.decoder = VGGDecoder(model='Simple_2', out_channels=encode_channels)
         else:
             self.decoder = VGGDecoder(model='Simple', out_channels=encode_channels)
         self.classification = nn.Sequential(

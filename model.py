@@ -198,10 +198,12 @@ class VGGDecoder(nn.Module):
             'D': [64, 64, 'M', 128, 128, 'M', 256, 256, 256, 'M', 512, 512, 512, 'M', 512, 512, 512, 'M'],
             'E': [64, 64, 'M', 128, 128, 'M', 256, 256, 256, 256, 'M', 512, 512, 512, 512, 'M', 512, 512,
                   512, 512, 'M'],
-            'S': [64, 'M', 128, 'M', 256, 'M', 512, 'M', 512, 'M']
+            'S': [64, 'M', 128, 'M', 256, 'M', 512, 'M', 512, 'M'],
+            'D2': ['M', 64, 64, 'M', 128, 128, 'M', 256, 256, 256, 'M', 512, 512, 512, 'M', 512, 512, 512],
+            'S2': ['M', 64, 'M', 128, 'M', 256, 'M', 512, 'M', 512]
         }
 
-        model_list = {'vgg11': 'A', 'vgg13': 'B', 'vgg16': 'D', 'vgg19': 'E', 'Simple': 'S'}
+        model_list = {'vgg11': 'A', 'vgg13': 'B', 'vgg16': 'D', 'vgg19': 'E', 'Simple': 'S', 'vgg16_2': 'D2', 'Simple_2': 'S2'}
         self.out_channels = out_channels
         self.decoder = self._make_vgg_layers(cfg[model_list[model]], batch_norm)
 
