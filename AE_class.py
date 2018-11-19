@@ -485,8 +485,6 @@ def _test_sample_batch(mol, cuda, x, y):
     b_x = Variable(x).cuda() if cuda else Variable(x)
     label = Variable(torch.Tensor([y[i][2] for i in range(len(y))]).long())
     label = label.cuda() if cuda else label
-    weights = Variable(torch.Tensor([y[i][3] for i in range(len(y))]))
-    weights = weights.cuda() if cuda else weights
 
     prob_class = mol.get_prob_class(b_x)
     _, predicted = torch.max(prob_class.data, 1)
