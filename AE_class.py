@@ -13,7 +13,7 @@ import torch.nn as nn
 from torchvision.utils import save_image
 from data_process import getDataLoader
 from utils.arguments import train_args
-from utils.utils import check_dir_exists, evaluate_cover, remove_dir_exists, evaluate_labeled_data
+from utils.utils import check_dir_exists, evaluate_cover, remove_dir_exists, evaluate_labeled_data, GPU
 from model import VGGDecoder, VGG16Feature, SimpleDecoder
 
 
@@ -299,6 +299,10 @@ def train(args, mol_short='AEClass_both', main_model=AEClass):
     # Arguments
     ################################################################
     ae_args = args
+    if args.gpu == -1:
+        os.environ["CUDA_VISIBLE_DEVICES"] = GPU().choose_gpu()
+    elif args.gpu is not None:
+        os.environ["CUDA_VISIBLE_DEVICES"] = str(args.gpu)
     cuda = ae_args.cuda and torch.cuda.is_available()
     device = torch.device("cuda" if cuda else "cpu")
     kwargs = {'num_workers': 1, 'pin_memory': True} if ae_args.cuda else {}

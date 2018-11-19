@@ -612,6 +612,43 @@ def save_images(files, pic_dir, nrow=8):
     save_image(imgs, os.path.join(pic_dir, os.path.basename(files[0])), nrow=nrow)
 
 
+class GPU:
+    def __init__(self, sleep=120):
+        self.max_gpu_util = 100
+        self.min_men_free = 8000
+        self.sleep = sleep
+        return
+
+    def choose_gpu(self):
+        while True:
+            id = self.which_to_use()
+            if id == -1:
+                print('[%s]Waiting for free gpu... Sleep %ds. ' % (time.ctime(), self.sleep))
+                time.sleep(self.sleep)
+            else:
+                # os.environ["CUDA_VISIBLE_DEVICES"] = str(id)
+                print('Using GPU %d' % id)
+                # return
+                return str(id)
+
+    def get_gpu_men(self):
+        gpu = os.popen('nvidia-smi -q -d Utilization |grep Gpu').readlines()
+        gpu = [float(x.strip().split(':')[1].split('%')[0]) for x in gpu]
+        men = os.popen('nvidia-smi -q -d Memory |grep -A4 GPU|grep Free').readlines()
+        men = [float(x.strip().split(':')[1].split('MiB')[0]) for x in men]
+        print(gpu, men)
+        return gpu, men
+
+    def which_to_use(self):
+        gpu, men = self.get_gpu_men()
+        idx = [x for x in range(len(gpu)) if (gpu[x] <= self.max_gpu_util) and (men[x] >= self.min_men_free)]
+        print(idx)
+        if len(idx) == 0:
+            return -1
+        else:
+            return idx[np.argmax([men[i] for i in idx])]
+
+
 if __name__ == '__main__':
     inception_json = '..\\res\evaluation_pic\Fin\inception_v3_conv-ImageNet1000-val\similar_fc_data.json'
     vgg_json = '..\\res\evaluation_pic\Fin\\vgg_conv-ImageNet1000-val\similar_fc_data.json'
@@ -630,7 +667,7 @@ if __name__ == '__main__':
     #                              label_file='E:\work\\feature generation\data\cover\\val_labels.json')
     # judge_cover_labels('..\\res\evaluation_pic\Fin\inception_v3_conv-ImageNet1000-val\similar_fc_data.json',
     #                              label_file='E:\work\\feature generation\data\cover\\val_labels.json')
-    # make_judge_file([aeclass1017_json, vggbase_all_json, vgg_json],
+    # make_judge_file([vggbase_json],
     #                     label_file=label_file, cover_dir=cover_dir, save_dir=eval_pic_dir, topk=5)
     # generate_judge_criteria(os.path.join(cover_dir, 'samples'), eval_pic_dir)
 

@@ -34,6 +34,8 @@ def train_args():
                         help="model name notification. e.g: '(try)'")
     parser.add_argument("--main-fn", type=str, default='train',
                         help="Main function to choose. Differ in different files.")
+    parser.add_argument("--gpu", type=int, default=None, help="gpu to use. -1 means choose gpu automatically."
+                                                              "None means assign gpu in terminal")
 
     args = parser.parse_args()
 
