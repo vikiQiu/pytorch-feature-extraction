@@ -485,14 +485,21 @@ def _test_sample_batch(mol, cuda, x, y):
     b_x = Variable(x).cuda() if cuda else Variable(x)
     label = Variable(torch.Tensor([y[i][2] for i in range(len(y))]).long())
     label = label.cuda() if cuda else label
+    weights = Variable(torch.Tensor([y[i][3] for i in range(len(y))]))
+    weights = weights.cuda() if cuda else weights
 
     prob_class = mol.get_prob_class(b_x)
     _, predicted = torch.max(prob_class.data, 1)
-    total = label.size(0)
-    correct = (predicted == label).sum().item()
-    top5pre = prob_class.topk(5, 1, True, True)
+    predicted = torch.Tensor([predicted[i] for i in range(len(weights)) if weights[i] == 1])
+    label2 = torch.Tensor([label[i] for i in range(len(weights)) if weights[i] == 1])
+    total = predicted.shape[0]
+    correct = (predicted == label2).sum().item()
+
+    prob_class2 = prob_class[[i for i in range(len(weights)) if weights[i] == 1]]
+    top5pre = prob_class2.topk(5, 1, True, True)
     top5pre = top5pre[1].t()
-    top5correct = top5pre.eq(label.view(1, -1).expand_as(top5pre)).sum().item()
+    label2 = label2.long().cuda() if cuda else label2.long()
+    top5correct = top5pre.eq(label2.view(1, -1).expand_as(top5pre)).sum().item()
 
     acc = correct / total
     top5_acc = top5correct / total
