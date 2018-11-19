@@ -66,7 +66,7 @@ class AEClass(torch.nn.Module):
         return fea
 
     def get_prob_class(self, x):
-        fea = self.feeatures(x)
+        fea = self.features(x)
         encode = self.small_features(fea) if self.encode_channels != 512 else fea
         c = encode.view(x.size(0), -1)
         c = self.classification(c)
