@@ -240,6 +240,22 @@ def get_imagenet1000_val_labels(dir_path, img_dir, file_name='labels.csv', Debug
     return img_list, label_list, label_ind
 
 
+class RandomBatchSampler:
+    def __init__(self, dataset, batch_size):
+        self.dataset = dataset
+        self.batch_size = batch_size
+        self.all_index = list(range(len(dataset)))
+
+    def get_sample(self):
+        idxs = np.random.choice(self.all_index, self.batch_size, replace=False)
+        images, labels = [], []
+        for idx in idxs:
+            img, l = self.dataset[idx]
+            images.append(img)
+            labels.append(l)
+        return torch.stack(images), labels
+
+
 ################################################################
 # Get ILSVRC2012 set
 ################################################################
