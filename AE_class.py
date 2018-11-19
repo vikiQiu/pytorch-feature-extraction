@@ -464,8 +464,8 @@ def train(args, mol_short='AEClass_both', main_model=AEClass):
                       'Time cost %.2f s; Classification error %.6f; Decoder error %.6f; Loss %.6f; '
                       'Accuracy %.3f%%/%.3f%%; Top5 Accuracy %.3f%%/%.3f%% (%s)' %
                       (time.time() - step_time, 0.0888 if type(loss2)==int else loss2.data[0], loss1.data[0],
-                       0.0888 if type(loss)==int else loss.data[0], correct*100/total_tmp, test_acc,
-                       top5correct*100/total_tmp, test_top5_acc, time.ctime()))
+                       0.0888 if type(loss)==int else loss.data[0], correct*100/total_tmp, test_acc*100,
+                       top5correct*100/total_tmp, test_top5_acc*100, time.ctime()))
 
                 writer.add_scalar('test/accuracy', test_acc, cnt)
                 writer.add_scalar('test/top5_accuracy', test_top5_acc, cnt)
