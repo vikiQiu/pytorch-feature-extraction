@@ -473,7 +473,7 @@ def train(args, mol_short='AEClass_both', main_model=AEClass):
                 correct, total, top5correct = 0, 0, 0
                 step_time = time.time()
 
-            cnt += 1    
+            cnt += 1
 
     print('Finished. Totally cost %.2f' % (time.time() - start_time))
     writer.export_scalars_to_json(os.path.join(log_dir, 'all_scalars.json'))
@@ -486,7 +486,7 @@ def _test_sample_batch(mol, cuda, x, y):
     label = Variable(torch.Tensor([y[i][2] for i in range(len(y))]).long())
     label = label.cuda() if cuda else label
 
-    prob_class = mol(b_x)
+    prob_class = mol.get_prob_class(b_x)
     _, predicted = torch.max(prob_class.data, 1)
     total = label.size(0)
     correct = (predicted == label).sum().item()
