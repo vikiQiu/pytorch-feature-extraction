@@ -400,8 +400,8 @@ def train(args, mol_short='AEClass_both', main_model=AEClass):
         #     # writer.add_scalar('test_cover/top5accuracy', test_top5acc, epoch)
 
         step_time = time.time()
-        mol.train()
         for step, (x, y) in enumerate(fuse_loader):
+            mol.train()
             b_x = Variable(x).cuda() if cuda else Variable(x)
             b_y = b_x.detach().cuda() if cuda else b_x.detach()  # batch y, shape (batch, 32*32*3)
             # //TODO
