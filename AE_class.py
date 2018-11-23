@@ -333,6 +333,7 @@ def train(args, mol_short='AEClass_both', main_model=AEClass):
     # train_loader = getDataLoader(args, kwargs, train='train')
     fuse_loader = getDataLoader(args, kwargs, train='fuse', p=args.imgnet_p)
     test_dataset = RandomBatchSampler(getDataset(args, train='test'), args.batch_size)
+    test_loader = getDataLoader(args, kwargs, train='test')
     # small_test_loader = getDataLoader(args, kwargs, train=False, p=10)
     # cover_loader = getDataLoader(args, kwargs, train='cover')
     cover_val_loader = getDataLoader(args, kwargs, train='cover_validation')
@@ -366,38 +367,38 @@ def train(args, mol_short='AEClass_both', main_model=AEClass):
     total, correct, top5correct, cnt = 0, 0, 0, 0
     print('Start training ...')
     for epoch in range(args.epoch):
-        # if (epoch % 5 == 0) and epoch != 0:
-        #     # Evaluation on cover data
-        #     mol.eval()
-        #     eval_dir = os.path.join(evaluation_dir, 'epoch%d' % epoch)
-        #     evaluate_cover(cover_val_loader, cover_sample_loader, mol, cuda, eval_dir, args)
-        #
-        #     fc_accuracy, fc_top5accuracy = evaluate_labeled_data(test_loader, mol, cuda, both=False)
-        #     print('Fc accuracy:', np.mean(fc_accuracy))
-        #     print('Fc top5 accuracy:', np.mean(fc_top5accuracy))
+        if (epoch % 5 == 0) and epoch != 0:
+            # Evaluation on cover data
+            mol.eval()
+            eval_dir = os.path.join(evaluation_dir, 'epoch%d' % epoch)
+            evaluate_cover(cover_val_loader, cover_sample_loader, mol, cuda, eval_dir, args)
 
-        # if epoch >= 0:
-        #     mol.eval()
-        #     # Testing on ImageNet val
-        #     print('######### Testing on ImageNet val Dataset ###########')
-        #     test_loss_decoder, test_loss_cls, test_acc, test_top5acc = test_cls_decoder(test_loader, mol, cuda, 'Full')
-        #     # test_loss = (1 - args.alpha) * test_loss_cls + args.alpha * test_loss_decoder / 0.001
-        #     writer.add_scalar('test_imagenet/loss_decoder', test_loss_decoder, epoch)
-        #     writer.add_scalar('test_imagenet/loss_classifier', test_loss_cls, epoch)
-        #     # writer.add_scalar('test_imagenet/loss', test_loss, epoch)
-        #     writer.add_scalar('test_imagenet/accuracy', test_acc, epoch)
-        #     writer.add_scalar('test_imagenet/top5accuracy', test_top5acc, epoch)
-        #
-        #     # Testing on Cover val
-        #     print('######### Testing on Cover val Dataset ###########')
-        #     # test_loss_decoder, test_loss_cls, test_acc, test_top5acc = test_cls_decoder(cover_val_loader, mol, cuda, 'Full')
-        #     test_loss_decoder = test_decoder(cover_val_loader, mol, cuda, 'Full')
-        #     # test_loss = (1 - args.alpha) * test_loss_cls + args.alpha * test_loss_decoder / 0.001
-        #     writer.add_scalar('test_cover/loss_decoder', test_loss_decoder, epoch)
-        #     # writer.add_scalar('test_cover/loss_classifier', test_loss_cls, epoch)
-        #     # writer.add_scalar('test_cover/loss', test_loss, epoch)
-        #     # writer.add_scalar('test_cover/accuracy', test_acc, epoch)
-        #     # writer.add_scalar('test_cover/top5accuracy', test_top5acc, epoch)
+            fc_accuracy, fc_top5accuracy = evaluate_labeled_data(test_loader, mol, cuda, both=False)
+            print('Fc accuracy:', np.mean(fc_accuracy))
+            print('Fc top5 accuracy:', np.mean(fc_top5accuracy))
+
+        if epoch >= 0:
+            mol.eval()
+            # Testing on ImageNet val
+            print('######### Testing on ImageNet val Dataset ###########')
+            test_loss_decoder, test_loss_cls, test_acc, test_top5acc = test_cls_decoder(test_loader, mol, cuda, 'Full')
+            # test_loss = (1 - args.alpha) * test_loss_cls + args.alpha * test_loss_decoder / 0.001
+            writer.add_scalar('test_imagenet/loss_decoder', test_loss_decoder, epoch)
+            writer.add_scalar('test_imagenet/loss_classifier', test_loss_cls, epoch)
+            # writer.add_scalar('test_imagenet/loss', test_loss, epoch)
+            writer.add_scalar('test_imagenet/accuracy', test_acc, epoch)
+            writer.add_scalar('test_imagenet/top5accuracy', test_top5acc, epoch)
+
+            # Testing on Cover val
+            print('######### Testing on Cover val Dataset ###########')
+            # test_loss_decoder, test_loss_cls, test_acc, test_top5acc = test_cls_decoder(cover_val_loader, mol, cuda, 'Full')
+            test_loss_decoder = test_decoder(cover_val_loader, mol, cuda, 'Full')
+            # test_loss = (1 - args.alpha) * test_loss_cls + args.alpha * test_loss_decoder / 0.001
+            writer.add_scalar('test_cover/loss_decoder', test_loss_decoder, epoch)
+            # writer.add_scalar('test_cover/loss_classifier', test_loss_cls, epoch)
+            # writer.add_scalar('test_cover/loss', test_loss, epoch)
+            # writer.add_scalar('test_cover/accuracy', test_acc, epoch)
+            # writer.add_scalar('test_cover/top5accuracy', test_top5acc, epoch)
 
         step_time = time.time()
         for step, (x, y) in enumerate(fuse_loader):
