@@ -195,7 +195,7 @@ def make_judge_file(json_files, label_file, cover_dir, save_dir, topk=23):
     dat = None
     for json_file in json_files:
         with open(json_file) as f:
-            tmp = json.load(f)['cos']
+            tmp = json.load(f)['distance']
             tmp = {l: set([ll[0] for ll in tmp[l][:topk]]) for l in tmp.keys()}
         if dat is None:
             dat = tmp
@@ -367,8 +367,8 @@ def evaluate_cover(cover_loader, cover_sample_loader, mol, cuda, save_dir, args,
     print('####### Evaluating Cover Data (Choose top%d similar images in the samples) ##########' % topk)
 
     print('[Feature] Generating Encode and fc Sample cover feature')
-    encode_fea, fc_fea, labels = generate_features(cover_sample_loader, mol, cuda)
-    sample_encode_features = {'features': np.array(encode_fea), 'labels': labels}
+    fc_fea, labels = generate_features(cover_sample_loader, mol, cuda, both=False)
+    # sample_encode_features = {'features': np.array(encode_fea), 'labels': labels}
     sample_fc_features = {'features': np.array(fc_fea), 'labels': labels}
 
     label_file = os.path.join(args.cover_dir, 'val_labels.json')
@@ -382,9 +382,9 @@ def evaluate_cover(cover_loader, cover_sample_loader, mol, cuda, save_dir, args,
 
     # print(cover_label, len(cover_label))
 
-    print('[Feature] Generating Encode and fc Cover feature')
-    encode_fea, fc_fea, labels = generate_features(cover_loader, mol, cuda)
-    encode_features = {'features': np.array(encode_fea), 'labels': labels}
+    # print('[Feature] Generating Encode and fc Cover feature')
+    fc_fea, labels = generate_features(cover_loader, mol, cuda, both=False)
+    # encode_features = {'features': np.array(encode_fea), 'labels': labels}
     fc_features = {'features': np.array(fc_fea), 'labels': labels}
 
     # evaluate_cover_by_features(sample_encode_features, encode_features, save_dir, topk, 'encode')
@@ -561,6 +561,7 @@ def generate_features(data_loader, mol, cuda, both=True):
     encode_features = []
     labels = []
     print('Total %d data batches' % len(data_loader))
+    mol.eval()
     for step, (x, y) in enumerate(data_loader):
         b_x = Variable(x, volatile=True).cuda() if cuda else Variable(x)
         label = [(y[0][i], y[1][i]) for i in range(len(y[0]))]
@@ -660,6 +661,8 @@ if __name__ == '__main__':
     aeclass1017_json = 'E:\work\\feature generation\pytorch-feature-extraction\\res\evaluation_pic\\20181018\AEClass_both_conv512-ImageNet1000-train-sub\epoch0\similar_fc_data.json'
     vggbase_all_json = 'E:\work\\feature generation\pytorch-feature-extraction\\res\evaluation_pic\\20181024\VGGClass_all_conv512-ImageNet1000-train-sub\epoch0\similar_fc_data.json'
     vggbase_json = 'E:\work\\feature generation\pytorch-feature-extraction\\res\evaluation_pic\\20181024\VGGClass_conv512-ImageNet1000-train-sub\epoch15\similar_fc_data.json'
+    binary512_json = 'E:\work\\feature generation\\1109_pytorch_feature_extraction\\res\\1123\inception_512fea_binary_model\similar_fc_data.json'
+    binary256_json = 'E:\work\\feature generation\\1109_pytorch_feature_extraction\\res\\1123\inception_256fea_binary_model\similar_fc_data.json'
     # prepare_train_data(200)
     # check_cover_data('E:\work\\feature generation\data\cover\images')
     # choose_cover_train('E:\work\\feature generation\data\cover')
@@ -667,12 +670,12 @@ if __name__ == '__main__':
     #                              label_file='E:\work\\feature generation\data\cover\\val_labels.json')
     # judge_cover_labels('..\\res\evaluation_pic\Fin\inception_v3_conv-ImageNet1000-val\similar_fc_data.json',
     #                              label_file='E:\work\\feature generation\data\cover\\val_labels.json')
-    # make_judge_file([vggbase_json],
-    #                     label_file=label_file, cover_dir=cover_dir, save_dir=eval_pic_dir, topk=5)
+    make_judge_file([binary512_json, binary256_json],
+                    label_file=label_file, cover_dir=cover_dir, save_dir=eval_pic_dir, topk=5)
     # generate_judge_criteria(os.path.join(cover_dir, 'samples'), eval_pic_dir)
 
     # add new judged labels
     # labels = update_cover_labels('..\\res\evaluation_pic\judges\similar_fc.json',
     #                              label_file='E:\work\\feature generation\data\cover\\val_labels.json')
-    judge_cover_labels(vggbase_json,
-                       label_file='E:\work\\feature generation\data\cover\\val_labels.json')
+    # judge_cover_labels(vggbase_json,
+    #                    label_file='E:\work\\feature generation\data\cover\\val_labels.json')
