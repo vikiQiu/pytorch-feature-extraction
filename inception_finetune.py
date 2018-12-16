@@ -3,6 +3,7 @@ import time
 import torch
 import logging
 import torch.nn as nn
+from torch.autograd import Variable
 from tensorboardX import SummaryWriter
 from utils.arguments import train_args
 from data_process import getDataLoader
@@ -52,7 +53,7 @@ class InceptionFinetuneModel:
         return mol
 
     def _transform_cuda(self, x):
-        return x.cuda if self.cuda else x
+        return x.cuda() if self.cuda else x
 
     def raw_model(self, is_train=True):
         mol = self._load_raw_model()
@@ -66,8 +67,8 @@ class InceptionFinetuneModel:
         else:
             mol.eval()
         for step, (x, y) in enumerate(test_loader):
-            b_x = self._transform_cuda(x)
-            label = torch.Tensor([y[2][i] for i in range(len(y[0]))]).long()
+            b_x = self._transform_cuda(Variable(x, volatile=True))
+            label = Variable(torch.Tensor([y[2][i] for i in range(len(y[0]))]).long())
             label = self._transform_cuda(label)
 
             prob_class = mol(b_x)
@@ -97,3 +98,4 @@ class InceptionFinetuneModel:
 if __name__ == '__main__':
     icp = InceptionFinetuneModel()
     icp.raw_model()
+    icp.raw_model(False)
