@@ -21,8 +21,6 @@ class InceptionFinetuneModel:
         self.kwargs = {'num_workers': 6, 'pin_memory': True}
 
         self.mol_dir = 'model'
-        self.finetune_model_name = 'incpetion_finetune'
-        self.finetune_mol_path = os.path.join(self.mol_dir, self.finetune_model_name)
 
         self.log_dir = os.path.join('log')
         self.log_file = os.path.join(self.log_dir, 'log_%s.log' % name)
@@ -44,16 +42,26 @@ class InceptionFinetuneModel:
         mol = inception_v3(pretrained=True, training=False).to(self.device)
         return mol
 
-    def _load_finetune_model(self):
-        if os.path.exists(self.finetune_mol_path):
+    def _load_finetune_model(self, mol_path):
+        if os.path.exists(mol_path):
             print('Loading model ...')
-            mol = torch.load(self.finetune_mol_path).to(self.device)
+            mol = torch.load(mol_path).to(self.device)
         else:
             mol = inception_v3(pretrained=True, training=False).to(self.device)
         return mol
 
     def _transform_cuda(self, x):
         return x.cuda() if self.cuda else x
+
+    def finetune_model(self, bn_train=False):
+        finetune_model_name = 'incpetion_finetune_%s' % ('bn_train' if bn_train else 'bn_not_train')
+        finetune_mol_path = os.path.join(self.mol_dir, finetune_model_name + '.pkl')
+        mol = self._load_finetune_model(finetune_mol_path)
+
+        test_loader = getDataLoader(self.args, self.kwargs, train='test')
+        total, correct, top5correct, loss_total = 0, 0, 0, 0
+        loss_class = nn.CrossEntropyLoss().cuda(self.cuda)
+        return
 
     def raw_model(self, is_train=True):
         mol = self._load_raw_model()
@@ -72,7 +80,7 @@ class InceptionFinetuneModel:
             label = Variable(torch.Tensor([y[2][i] for i in range(len(y[0]))]).long())
             label = self._transform_cuda(label)
 
-            prob_class = mol(b_x)[0]
+            prob_class = mol(b_x)[0] if is_train else mol(b_x)
             loss = loss_class(prob_class, label)  # mean square error
 
             _, predicted = torch.max(prob_class.data, 1)
@@ -98,5 +106,5 @@ class InceptionFinetuneModel:
 
 if __name__ == '__main__':
     icp = InceptionFinetuneModel()
-    icp.raw_model()
+    # icp.raw_model()
     icp.raw_model(False)
