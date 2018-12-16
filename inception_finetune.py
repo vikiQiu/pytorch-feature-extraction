@@ -66,12 +66,13 @@ class InceptionFinetuneModel:
             mol.train()
         else:
             mol.eval()
+        log_print('############## %s Mode #################' % ('Training' if is_train else 'Evaluating'))
         for step, (x, y) in enumerate(test_loader):
             b_x = self._transform_cuda(Variable(x, volatile=True))
             label = Variable(torch.Tensor([y[2][i] for i in range(len(y[0]))]).long())
             label = self._transform_cuda(label)
 
-            prob_class = mol(b_x)
+            prob_class = mol(b_x)[0]
             loss = loss_class(prob_class, label)  # mean square error
 
             _, predicted = torch.max(prob_class.data, 1)
