@@ -3,6 +3,7 @@ import json
 import time
 import shutil
 import torch
+import logging
 import torch.nn as nn
 from PIL import Image
 from torch.autograd import Variable
@@ -152,6 +153,7 @@ def update_cover_labels(json_file, label_file):
         with open(judge_file) as f:
             judges = json.load(f)
         for sample in list(judges.keys()):
+            print(sample)
             good = judges[sample]['good']
             # bad = judges[sample]['bad']
             # ok = set(range(len(dat[sample]))) - set(good) - set(bad)
@@ -195,7 +197,7 @@ def make_judge_file(json_files, label_file, cover_dir, save_dir, topk=23):
     dat = None
     for json_file in json_files:
         with open(json_file) as f:
-            tmp = json.load(f)['distance']
+            tmp = json.load(f)['cos']
             tmp = {l: set([ll[0] for ll in tmp[l][:topk]]) for l in tmp.keys()}
         if dat is None:
             dat = tmp
@@ -650,6 +652,14 @@ class GPU:
             return idx[np.argmax([men[i] for i in idx])]
 
 
+def log_print(info, type='info'):
+    print(info)
+    if type == 'error':
+        logging.error(info)
+    else:
+        logging.info(info)
+
+
 if __name__ == '__main__':
     inception_json = '..\\res\evaluation_pic\Fin\inception_v3_conv-ImageNet1000-val\similar_fc_data.json'
     vgg_json = '..\\res\evaluation_pic\Fin\\vgg_conv-ImageNet1000-val\similar_fc_data.json'
@@ -663,6 +673,9 @@ if __name__ == '__main__':
     vggbase_json = 'E:\work\\feature generation\pytorch-feature-extraction\\res\evaluation_pic\\20181024\VGGClass_conv512-ImageNet1000-train-sub\epoch15\similar_fc_data.json'
     binary512_json = 'E:\work\\feature generation\\1109_pytorch_feature_extraction\\res\\1123\inception_512fea_binary_model\similar_fc_data.json'
     binary256_json = 'E:\work\\feature generation\\1109_pytorch_feature_extraction\\res\\1123\inception_256fea_binary_model\similar_fc_data.json'
+    incp_512_json = 'E:\work\\feature generation\\1109_pytorch_feature_extraction\\res\inception_512fea_model\similar_fc_data.json'
+    incp_256_json = 'E:\work\\feature generation\\1109_pytorch_feature_extraction\\res\inception_256fea_model\similar_fc_data.json'
+    aeclass1123_json = 'E:\work\\feature generation\pytorch-feature-extraction\\res\evaluation_pic\\20181125\AEClass_both_conv512-ImageNet1000-train-sub\epoch0\similar_fc_data.json'
     # prepare_train_data(200)
     # check_cover_data('E:\work\\feature generation\data\cover\images')
     # choose_cover_train('E:\work\\feature generation\data\cover')
@@ -670,12 +683,12 @@ if __name__ == '__main__':
     #                              label_file='E:\work\\feature generation\data\cover\\val_labels.json')
     # judge_cover_labels('..\\res\evaluation_pic\Fin\inception_v3_conv-ImageNet1000-val\similar_fc_data.json',
     #                              label_file='E:\work\\feature generation\data\cover\\val_labels.json')
-    make_judge_file([binary512_json, binary256_json],
-                    label_file=label_file, cover_dir=cover_dir, save_dir=eval_pic_dir, topk=5)
+    # make_judge_file([binary512_json, binary256_json, incp_256_json, incp_512_json, aeclass1123_json],
+    #                 label_file=label_file, cover_dir=cover_dir, save_dir=eval_pic_dir, topk=5)
     # generate_judge_criteria(os.path.join(cover_dir, 'samples'), eval_pic_dir)
 
     # add new judged labels
     # labels = update_cover_labels('..\\res\evaluation_pic\judges\similar_fc.json',
     #                              label_file='E:\work\\feature generation\data\cover\\val_labels.json')
-    # judge_cover_labels(vggbase_json,
-    #                    label_file='E:\work\\feature generation\data\cover\\val_labels.json')
+    judge_cover_labels(binary256_json,
+                       label_file='E:\work\\feature generation\data\cover\\val_labels.json')

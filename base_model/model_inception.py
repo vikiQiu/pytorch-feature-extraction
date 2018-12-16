@@ -61,7 +61,7 @@ class Inception3Class(nn.Module):
 
 
 class Inception3Features(nn.Module):
-    def __init__(self, num_classes=1000, aux_logits=True, transform_input=False, training=True):
+    def __init__(self, num_classes=1000, aux_logits=True, transform_input=False, training=True, is_view=True):
         super(Inception3Features, self).__init__()
         self.training = training
         self.aux_logits = aux_logits
@@ -84,6 +84,8 @@ class Inception3Features(nn.Module):
         self.Mixed_7a = InceptionD(768)
         self.Mixed_7b = InceptionE(1280)
         self.Mixed_7c = InceptionE(2048)
+
+        self.is_view = is_view
 
         for m in self.modules():
             if isinstance(m, nn.Conv2d) or isinstance(m, nn.Linear):
@@ -145,7 +147,8 @@ class Inception3Features(nn.Module):
         # 8 x 8 x 2048
         x = F.avg_pool2d(x, kernel_size=8)
         fc = F.dropout(x, training=self.training)
-        fc = fc.view(fc.size(0), -1)
+        if self.is_view:
+            fc = fc.view(fc.size(0), -1)
         # if self.training and self.aux_logits:
         #     return x, None
         return fc
