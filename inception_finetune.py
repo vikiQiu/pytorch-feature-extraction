@@ -65,22 +65,22 @@ class InceptionFinetuneModel:
         return
 
     def bn_study(self):
+        '''Momentum = 0, output = (x-batch_mean)/(batch_std+eps)*\alpha + \beta'''
         mol = self._load_raw_model()
         test_loader = getDataLoader(self.args, self.kwargs, train='test', is_normalize=True)
-        total, correct, top5correct, loss_total = 0, 0, 0, 0
-        loss_class = nn.CrossEntropyLoss().cuda(self.cuda)
 
-        step_time = time.time()
-        mol.train()
         for step, (x, y) in enumerate(test_loader):
             b_x = self._transform_cuda(Variable(x, volatile=True))
-            label = Variable(torch.Tensor([y[2][i] for i in range(len(y[0]))]).long())
-            label = self._transform_cuda(label)
 
-            conv = mol.Conv2d_1a_3x3.conv(x)
+            conv = mol.Conv2d_1a_3x3.conv(b_x)
             dim = conv.shape
-            m = conv.sum(0).sum(1).sum(1)/(dim[0]*dim[2]*dim[3]).view(1, -1, 1, 1)
-            std = ((conv-m)**2).sum(2).sum(2)/(dim[2]*dim[3]).mean(0).view(1, -1, 1, 1)
+            m = (conv.sum(0).sum(1).sum(1)/(dim[0]*dim[2]*dim[3])).view(1, -1, 1, 1)
+            var = (((conv-m)**2).sum(0).sum(1).sum(1)/(dim[0]*dim[2]*dim[3])).view(1, -1, 1, 1) + 0.001
+            # tmp = (conv-mol.Conv2d_1a_3x3.bn.running_mean.view(1, -1, 1, 1)) / torch.sqrt(mol.Conv2d_1a_3x3.bn.running_var.view(1, -1, 1, 1))
+            tmp = (conv - m) / torch.sqrt(var)
+            tmp = tmp * mol.Conv2d_1a_3x3.bn.weight.view(1, -1, 1, 1) + mol.Conv2d_1a_3x3.bn.bias.view(1, -1, 1, 1)
+            bn = mol.Conv2d_1a_3x3.bn(conv)
+            print((bn-tmp).mean(), (bn-tmp).std())
 
     def raw_model(self, is_train=True):
         mol = self._load_raw_model()
@@ -135,7 +135,7 @@ class InceptionFinetuneModel:
         m = means.avg.view(1, -1, 1, 1)
         for step, (x, _) in enumerate(data_loader):
             dim = x.shape
-            s = ((x-m)**2).sum(2).sum(2)/(dim[2]*dim[3])
+            s = (((x-m)**2).sum(2).sum(2)/(dim[2]*dim[3])).sum(0)
             n_dim = dim[0]
             vars.update(s / n_dim, n_dim)
             if step % 50 == 0:
@@ -183,5 +183,5 @@ if __name__ == '__main__':
     # icp.raw_model()
     # icp.train_mean_var()
     icp.val_mean_var()
-    # icp.cover_mean_var()
+    icp.cover_mean_var()
     # icp.bn_study()
