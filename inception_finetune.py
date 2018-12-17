@@ -40,7 +40,7 @@ class InceptionFinetuneModel:
                 log_print('No free GPU, using CPU instead.')
 
     def _load_raw_model(self):
-        mol = torchvision.models.inception_v3(pretrained=True, transform_input=False)
+        mol = torchvision.models.inception_v3(pretrained=True, transform_input=False).to(self.device)
         return mol
 
     def _load_finetune_model(self, mol_path):
@@ -107,5 +107,5 @@ class InceptionFinetuneModel:
 
 if __name__ == '__main__':
     icp = InceptionFinetuneModel()
-    # icp.raw_model()
+    icp.raw_model()
     icp.raw_model(False)
