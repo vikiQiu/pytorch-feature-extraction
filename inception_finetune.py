@@ -66,7 +66,7 @@ class InceptionFinetuneModel:
 
     def raw_model(self, is_train=True):
         mol = self._load_raw_model()
-        test_loader = getDataLoader(self.args, self.kwargs, train='test')
+        test_loader = getDataLoader(self.args, self.kwargs, train='test', normalize=True)
         total, correct, top5correct, loss_total = 0, 0, 0, 0
         loss_class = nn.CrossEntropyLoss().cuda(self.cuda)
 
@@ -104,8 +104,57 @@ class InceptionFinetuneModel:
                   ('Train' if is_train else 'Evaluation', loss_total / total,
                    correct * 100 / total, top5correct * 100 / total))
 
+    def _data_mean_var(self, data_loader):
+        means = AverageMeter()
+        vars = AverageMeter()
+        for step, (x, _) in enumerate(data_loader):
+            s = x.sum(0).sum(1).sum(1)
+            dim = x.shape
+            n_dim = dim[0]*dim[2]*dim[3]
+            means.update(s/n_dim, n_dim)
+            if step % 50 == 0:
+                print('Step %d/%d' % (step, len(data_loader)), ' | Average mean = ', means.avg)
+        m = means.avg.view(1, -1, 1, 1)
+        for step, (x, _) in enumerate(data_loader):
+            s = ((x-m)**2).sum(0).sum(1).sum(1)
+            dim = x.shape
+            n_dim = dim[0] * dim[2] * dim[3]
+            vars.update(s / n_dim, n_dim)
+            if step % 50 == 0:
+                print('Step %d/%d' % (step, len(data_loader)),
+                      ' | Average var =', vars.avg, 'Average std =', torch.sqrt(vars.avg))
+        print('[Final Result]: Average mean =', means.avg, 'Average std =', torch.sqrt(vars.avg))
+
+    def val_mean_var(self):
+        test_loader = getDataLoader(self.args, self.kwargs, train='test', normalize=False)
+        self._data_mean_var(test_loader)
+
+    def train_mean_var(self):
+        train_loader = getDataLoader(self.args, self.kwargs, train='train', normalize=False)
+        self._data_mean_var(train_loader)
+
+
+class AverageMeter(object):
+    """Computes and stores the average and current value"""
+    def __init__(self, n=1):
+        self.reset(n)
+
+    def reset(self, n):
+        self.val = 0 if n==1 else torch.Tensor([0]*n)
+        self.avg = 0 if n==1 else torch.Tensor([0]*n)
+        self.sum = 0 if n==1 else torch.Tensor([0]*n)
+        self.count = 0 if n==1 else torch.Tensor([0]*n)
+
+    def update(self, val, n=1):
+        self.val = val
+        self.sum += val * n
+        self.count += n
+        self.avg = self.sum / self.count
+
 
 if __name__ == '__main__':
     icp = InceptionFinetuneModel()
-    icp.raw_model()
-    icp.raw_model(False)
+    # icp.raw_model()
+    # icp.raw_model(False)
+    icp.train_mean_var()
+    icp.val_mean_var()

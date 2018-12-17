@@ -39,7 +39,7 @@ def center_fix_size_transform(size):
         transforms.Resize(size),
         transforms.CenterCrop((size, size)),
         transforms.ToTensor(), # range [0, 255] -> [0.0,1.0]
-        normalize
+        # normalize
         ]
     )
     return trans
@@ -62,7 +62,7 @@ loaders = {'default': default_loader}
 # Dataset and Data Loader
 ################################################################
 
-def getDataset(args, train='train'):
+def getDataset(args, train='train', normalize=False):
     '''
         Now support ['ImageNet1000-val']。
         Add more dataset in future.
@@ -78,7 +78,7 @@ def getDataset(args, train='train'):
     if 'train_subset' in os.path.basename(data_dir):
         dataset = ImageNetSubTrainDataset(data_dir,
                                           img_transform=transformers[transform_type],
-                                          loader=loaders[args.img_loader])
+                                          loader=loaders[args.img_loader], normalize=normalize)
     elif 'cover' in os.path.basename(data_dir):
         if train == 'cover':
             dataset = CoverDataset(os.path.join(data_dir, 'images'),
@@ -127,17 +127,17 @@ class SampledDataset(Data.DataLoader):
         return self.dat_len
 
 
-def getDataLoader(args, kwargs, train='train', p=1):
+def getDataLoader(args, kwargs, train='train', p=1, normalize=False):
     if train == 'test':
-        dataset = getDataset(args, train)
+        dataset = getDataset(args, train, normalize)
         dataset = SampledDataset(dataset, p)
     elif train == 'fuse':
-        dimgnet = getDataset(args, 'train')
+        dimgnet = getDataset(args, 'train', normalize)
         dimgnet = SampledDataset(dimgnet, p)
         dcover = getDataset(args, train='cover')
         dataset = FuseDataset(dcover, dimgnet)
     else:
-        dataset = getDataset(args, train)
+        dataset = getDataset(args, train, normalize)
         dataset = SampledDataset(dataset, p)
 
     return Data.DataLoader(dataset=dataset, batch_size=args.batch_size, shuffle=True, **kwargs)
@@ -289,7 +289,7 @@ class ImageNetDataset(Data.Dataset):
 class ImageNetSubTrainDataset(Data.Dataset):
     def __init__(self, img_dir,
                  img_transform=None,
-                 loader=default_loader):
+                 loader=default_loader, normalize=False):
         self.img_dir = img_dir
         self.loader = loader
         self.img_transform = img_transform
@@ -309,6 +309,8 @@ class ImageNetSubTrainDataset(Data.Dataset):
 
         if self.img_transform is not None:
             img = self.img_transform(img)
+        if normalize:
+            img = normalize(img)
         return img, (label, img_name, label_idx)
 
     def __len__(self):
