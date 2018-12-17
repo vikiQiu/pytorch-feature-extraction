@@ -162,7 +162,7 @@ class AverageMeter(object):
 if __name__ == '__main__':
     icp = InceptionFinetuneModel()
     # icp.raw_model()
-    # icp.raw_model(False)
+    icp.raw_model(is_train=False)
     # icp.train_mean_var()
     # icp.val_mean_var()
-    icp.cover_mean_var()
+    # icp.cover_mean_var()
