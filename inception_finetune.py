@@ -116,14 +116,14 @@ class InceptionFinetuneModel:
                 print('Step %d/%d' % (step, len(data_loader)), ' | Average mean = ', means.avg)
         m = means.avg.view(1, -1, 1, 1)
         for step, (x, _) in enumerate(data_loader):
-            s = ((x-m)**2).sum(0).sum(1).sum(1)
+            s = (torch.sqrt((x-m)**2)).sum(0).sum(1).sum(1)
             dim = x.shape
             n_dim = dim[0] * dim[2] * dim[3]
             vars.update(s / n_dim, n_dim)
             if step % 50 == 0:
                 print('Step %d/%d' % (step, len(data_loader)),
-                      ' | Average var =', vars.avg, 'Average std =', torch.sqrt(vars.avg))
-        print('[Final Result]: Average mean =', means.avg, 'Average std =', torch.sqrt(vars.avg))
+                      ' | Average var =', vars.avg, 'Average std =', vars.avg)
+        print('[Final Result]: Average mean =', means.avg, 'Average std =', vars.avg)
 
     def val_mean_var(self):
         print('###### Processing ImageNet Validation Data mean and std ###### ')
