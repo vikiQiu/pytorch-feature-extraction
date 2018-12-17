@@ -66,7 +66,7 @@ class InceptionFinetuneModel:
 
     def raw_model(self, is_train=True):
         mol = self._load_raw_model()
-        test_loader = getDataLoader(self.args, self.kwargs, train='test', normalize=True)
+        test_loader = getDataLoader(self.args, self.kwargs, train='test', is_normalize=True)
         total, correct, top5correct, loss_total = 0, 0, 0, 0
         loss_class = nn.CrossEntropyLoss().cuda(self.cuda)
 
@@ -126,11 +126,13 @@ class InceptionFinetuneModel:
         print('[Final Result]: Average mean =', means.avg, 'Average std =', torch.sqrt(vars.avg))
 
     def val_mean_var(self):
-        test_loader = getDataLoader(self.args, self.kwargs, train='test', normalize=False)
+        print('###### Processing ImageNet Train Data mean and std ###### ')
+        test_loader = getDataLoader(self.args, self.kwargs, train='test', is_normalize=False)
         self._data_mean_var(test_loader)
 
     def train_mean_var(self):
-        train_loader = getDataLoader(self.args, self.kwargs, train='train', normalize=False)
+        print('###### Processing ImageNet Validation Data mean and std ###### ')
+        train_loader = getDataLoader(self.args, self.kwargs, train='train', is_normalize=False)
         self._data_mean_var(train_loader)
 
 
