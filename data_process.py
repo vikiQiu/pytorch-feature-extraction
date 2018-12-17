@@ -273,8 +273,8 @@ class ImageNetDataset(Data.Dataset):
         self.loader = loader
         self.all_label = list(sorted(np.unique(self.label_list)))
         self.is_normalize = is_normalize
-        self.normalize = transforms.Normalize(mean=[0.4764, 0.4504, 0.4005],
-                                              std=[0.2328, 0.2254, 0.2370])
+        # self.normalize = transforms.Normalize(mean=[0.4764, 0.4504, 0.4005],
+        #                                       std=[0.2328, 0.2254, 0.2370])
 
     def __getitem__(self, index):
         img_path = self.img_list[index]
@@ -285,7 +285,7 @@ class ImageNetDataset(Data.Dataset):
         if self.img_transform is not None:
             img = self.img_transform(img)
         if self.is_normalize:
-            img = self.normalize(img)
+            img = normalize(img)
         return img, (label, img_name, self.all_label.index(label))
 
     def __len__(self):
