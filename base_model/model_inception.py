@@ -478,7 +478,7 @@ class BasicConv2d(nn.Module):
     def __init__(self, in_channels, out_channels, **kwargs):
         super(BasicConv2d, self).__init__()
         self.conv = nn.Conv2d(in_channels, out_channels, bias=False, **kwargs)
-        self.bn = nn.BatchNorm2d(out_channels, eps=0.001, momentum=0.95)
+        self.bn = nn.BatchNorm2d(out_channels, eps=0.001, momentum=1)
 
     def forward(self, x):
         x = self.conv(x)
