@@ -64,6 +64,24 @@ class InceptionFinetuneModel:
         loss_class = nn.CrossEntropyLoss().cuda(self.cuda)
         return
 
+    def bn_study(self):
+        mol = self._load_raw_model()
+        test_loader = getDataLoader(self.args, self.kwargs, train='test', is_normalize=True)
+        total, correct, top5correct, loss_total = 0, 0, 0, 0
+        loss_class = nn.CrossEntropyLoss().cuda(self.cuda)
+
+        step_time = time.time()
+        mol.train()
+        for step, (x, y) in enumerate(test_loader):
+            b_x = self._transform_cuda(Variable(x, volatile=True))
+            label = Variable(torch.Tensor([y[2][i] for i in range(len(y[0]))]).long())
+            label = self._transform_cuda(label)
+
+            conv = mol.Conv2d_1a_3x3.conv(x)
+            dim = conv.shape
+            m = conv.sum(0).sum(1).sum(1)/(dim[0]*dim[2]*dim[3]).view(1, -1, 1, 1)
+            std = ((conv-m)**2).sum(2).sum(2)/(dim[2]*dim[3]).mean(0).view(1, -1, 1, 1)
+
     def raw_model(self, is_train=True):
         mol = self._load_raw_model()
         test_loader = getDataLoader(self.args, self.kwargs, train='test', is_normalize=True)
@@ -116,9 +134,9 @@ class InceptionFinetuneModel:
                 print('Step %d/%d' % (step, len(data_loader)), ' | Average mean = ', means.avg)
         m = means.avg.view(1, -1, 1, 1)
         for step, (x, _) in enumerate(data_loader):
-            s = (torch.sqrt((x-m)**2)).sum(0).sum(1).sum(1)
             dim = x.shape
-            n_dim = dim[0] * dim[2] * dim[3]
+            s = ((x-m)**2).sum(2).sum(2)/(dim[2]*dim[3])
+            n_dim = dim[0]
             vars.update(s / n_dim, n_dim)
             if step % 50 == 0:
                 print('Step %d/%d' % (step, len(data_loader)),
@@ -161,8 +179,9 @@ class AverageMeter(object):
 
 if __name__ == '__main__':
     icp = InceptionFinetuneModel()
-    icp.raw_model(is_train=False)
-    icp.raw_model()
+    # icp.raw_model(is_train=False)
+    # icp.raw_model()
     # icp.train_mean_var()
-    # icp.val_mean_var()
+    icp.val_mean_var()
     # icp.cover_mean_var()
+    # icp.bn_study()
