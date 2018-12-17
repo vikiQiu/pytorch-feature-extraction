@@ -75,7 +75,7 @@ class InceptionFinetuneModel:
             conv = mol.Conv2d_1a_3x3.conv(b_x)
             dim = conv.shape
             m = (conv.sum(0).sum(1).sum(1)/(dim[0]*dim[2]*dim[3])).view(1, -1, 1, 1)
-            var = (((conv-m)**2).sum(0).sum(1).sum(1)/(dim[0]*dim[2]*dim[3])).view(1, -1, 1, 1) + 0.001
+            var = (((conv-m)**2).sum(0).sum(1).sum(1)/(dim[0]*dim[2]*dim[3]-1)).view(1, -1, 1, 1) + 0.001
             # tmp = (conv-mol.Conv2d_1a_3x3.bn.running_mean.view(1, -1, 1, 1)) / torch.sqrt(mol.Conv2d_1a_3x3.bn.running_var.view(1, -1, 1, 1))
             tmp = (conv - m) / torch.sqrt(var)
             tmp = tmp * mol.Conv2d_1a_3x3.bn.weight.view(1, -1, 1, 1) + mol.Conv2d_1a_3x3.bn.bias.view(1, -1, 1, 1)
@@ -126,6 +126,7 @@ class InceptionFinetuneModel:
         means = AverageMeter()
         vars = AverageMeter()
         for step, (x, _) in enumerate(data_loader):
+            if step > 50: break
             s = x.sum(0).sum(1).sum(1)
             dim = x.shape
             n_dim = dim[0]*dim[2]*dim[3]
@@ -135,7 +136,7 @@ class InceptionFinetuneModel:
         m = means.avg.view(1, -1, 1, 1)
         for step, (x, _) in enumerate(data_loader):
             dim = x.shape
-            s = (((x-m)**2).sum(2).sum(2)/(dim[2]*dim[3])).sum(0)
+            s = torch.sqrt(((x-m)**2).sum(2).sum(2)/(dim[2]*dim[3])).sum(0)
             n_dim = dim[0]
             vars.update(s / n_dim, n_dim)
             if step % 50 == 0:
