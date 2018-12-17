@@ -3,6 +3,7 @@ import time
 import torch
 import logging
 import torch.nn as nn
+import torchvision
 from torch.autograd import Variable
 from tensorboardX import SummaryWriter
 from utils.arguments import train_args
@@ -39,7 +40,7 @@ class InceptionFinetuneModel:
                 log_print('No free GPU, using CPU instead.')
 
     def _load_raw_model(self):
-        mol = inception_v3(pretrained=True, training=False).to(self.device)
+        mol = torchvision.models.inception_v3(pretrained=True, transform_input=False)
         return mol
 
     def _load_finetune_model(self, mol_path):
