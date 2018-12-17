@@ -126,14 +126,19 @@ class InceptionFinetuneModel:
         print('[Final Result]: Average mean =', means.avg, 'Average std =', torch.sqrt(vars.avg))
 
     def val_mean_var(self):
-        print('###### Processing ImageNet Train Data mean and std ###### ')
+        print('###### Processing ImageNet Validation Data mean and std ###### ')
         test_loader = getDataLoader(self.args, self.kwargs, train='test', is_normalize=False)
         self._data_mean_var(test_loader)
 
     def train_mean_var(self):
-        print('###### Processing ImageNet Validation Data mean and std ###### ')
+        print('###### Processing ImageNet Training Data mean and std ###### ')
         train_loader = getDataLoader(self.args, self.kwargs, train='train', is_normalize=False)
         self._data_mean_var(train_loader)
+
+    def cover_mean_var(self):
+        print('###### Processing ImageNet Training Data mean and std ###### ')
+        cover_loader = getDataLoader(self.args, self.kwargs, train='cover_validation', is_normalize=False)
+        self._data_mean_var(cover_loader)
 
 
 class AverageMeter(object):
@@ -158,5 +163,6 @@ if __name__ == '__main__':
     icp = InceptionFinetuneModel()
     # icp.raw_model()
     # icp.raw_model(False)
-    icp.train_mean_var()
-    icp.val_mean_var()
+    # icp.train_mean_var()
+    # icp.val_mean_var()
+    icp.cover_mean_var()

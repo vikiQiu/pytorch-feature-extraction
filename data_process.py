@@ -83,15 +83,15 @@ def getDataset(args, train='train', is_normalize=False):
         if train == 'cover':
             dataset = CoverDataset(os.path.join(data_dir, 'images'),
                                    img_transform=transformers['center_crop' + str(args.img_size)],
-                                   loader=loaders[args.img_loader])
+                                   loader=loaders[args.img_loader], is_normalize=is_normalize)
         elif train == 'cover_validation':
             dataset = CoverDataset(os.path.join(data_dir, 'validation'),
                                    img_transform=transformers['center_crop' + str(args.img_size)],
-                                   loader=loaders[args.img_loader])
+                                   loader=loaders[args.img_loader], is_normalize=is_normalize)
         else:
             dataset = CoverDataset(os.path.join(data_dir, 'samples'),
                                    img_transform=transformers['center_crop' + str(args.img_size)],
-                                   loader=loaders[args.img_loader])
+                                   loader=loaders[args.img_loader], is_normalize=is_normalize)
     else:
         label_dir = os.path.join(data_dir, 'ILSVRC2012_bbox_val_v3')
         img_dir = os.path.join(data_dir, 'ILSVRC2012_img_val')
@@ -325,7 +325,8 @@ class ImageNetSubTrainDataset(Data.Dataset):
 class CoverDataset(Data.Dataset):
     def __init__(self, img_dir,
                  img_transform=None,
-                 loader=default_loader):
+                 loader=default_loader,
+                 is_normalize=False):
         self.img_dir = img_dir
         self.loader = loader
         self.img_transform = img_transform
